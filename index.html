@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <script src="https://unpkg.com/three@0.136.0/build/three.js"></script>
+    <script src="https://unpkg.com/three@0.136.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://unpkg.com/three@0.136.0/examples/js/loaders/RGBELoader.js"></script>
+
+    <!-- <script src="https://unpkg.com/three@0.136.0/examples/js/loaders/TextureLoader.js"></script> -->
+    <script src="https://unpkg.com/three@0.136.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="pathTracer.js"></script>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+      }
+      canvas {
+        width: 100%;
+        height: 100vh;
+      }
+    </style>
+  </head>
+  <body>
+    <script>
+      const {
+        LGLTracerRenderer,
+        DisneyMaterial,
+        DirectionalLight,
+        QuadLight,
+        RectAreaLight,
+      } = LGLTracer;
+      async function ae() {
+        let e = [];
+        const i = [],
+          t = new THREE.TextureLoader();
+        return (
+          [
+            "/assets/diningRoom/textures/book1.jpg",
+            "/assets/diningRoom/textures/book2.jpg",
+            "/assets/diningRoom/textures/book3.jpg",
+            "/assets/diningRoom/textures/book4.jpg",
+            "/assets/diningRoom/textures/book6.jpg",
+            "/assets/diningRoom/textures/book7.jpg",
+            "/assets/diningRoom/textures/book8.jpg",
+            "/assets/diningRoom/textures/book9.jpg",
+            "/assets/diningRoom/textures/book10.jpg",
+            "/assets/diningRoom/textures/book11.jpg",
+            "/assets/diningRoom/textures/book14.jpg",
+            "/assets/diningRoom/textures/book15.jpg",
+            "/assets/diningRoom/textures/book16.jpg",
+            "/assets/diningRoom/textures/book17.jpg",
+            "/assets/diningRoom/textures/book18.jpg",
+            "/assets/diningRoom/textures/box.jpg",
+            "/assets/diningRoom/textures/floor.jpg",
+            "/assets/diningRoom/textures/painting.jpg",
+            "/assets/diningRoom/textures/shelfbook1.jpg",
+            "/assets/diningRoom/textures/shelfbook2.jpg",
+          ].forEach((r) => {
+            i.push(
+              new Promise((m) => {
+                t.load(r, m);
+              })
+            );
+          }),
+          await Promise.all(i).then((r) => {
+            e = r;
+          }),
+          e
+        );
+      }
+      async function oe() {
+        const e = await ae(),
+          i = new DisneyMaterial({
+            color: new THREE.Color(0.005, 0.005, 0.005),
+            roughness: 0.4472,
+          }),
+          l = new DisneyMaterial({
+            color: new THREE.Color(1, 1, 1),
+            roughness: 0.3872,
+            metalness: 1,
+            subsurface: 0.3,
+            atDistance: 0.4,
+          }),
+          r = new DisneyMaterial({
+            color: new THREE.Color(0.713, 0.8, 0.8),
+            transmission: 1,
+            roughness: 0.01,
+            subsurface: 0.3,
+            atDistance: 0.4,
+          }),
+          m = new DisneyMaterial({
+            color: new THREE.Color(0.787, 0.758, 0.737),
+            roughness: 0,
+            clearcoat: 1,
+            subsurface: 0.3,
+            atDistance: 0.4,
+          }),
+          P = new DisneyMaterial({
+            map: e[16],
+            roughness: 0.2236,
+            // transmission: 1,
+            subsurface: 1,
+          }),
+          x = new DisneyMaterial({
+            map: e[16],
+            roughness: 0.3162,
+            transmission: 1,
+          }),
+          R = new DisneyMaterial({
+            map: e[17],
+            transmission: 1,
+          }),
+          h = new DisneyMaterial({
+            color: new THREE.Color(0.842, 0.842, 0.842),
+            roughness: 0.44721,
+            subsurface: 0.3,
+            atDistance: 0.4,
+          }),
+          j = new DisneyMaterial({
+            color: new THREE.Color(0.016, 0.047, 0.002),
+            roughness: 0.44721,
+            subsurface: 0.3,
+            atDistance: 0.4,
+          }),
+          g = new DisneyMaterial({
+            color: new THREE.Color(0.009, 0.009, 0.009),
+            roughness: 0.44721,
+            clearcoat: 1,
+            subsurface: 1,
+            atDistance: 0.4,
+            transmission: 1,
+            extinction: new THREE.Color(0.009, 0.009, 0.009),
+          }),
+          t = new DisneyMaterial({
+            roughness: 0,
+            metalness: 1,
+            subsurface: 1,
+            atDistance: 0.4,
+            transmission: 1,
+            extinction: new THREE.Color(0.009, 0.009, 0.009),
+          }),
+          p = new DisneyMaterial({
+            map: e[18],
+            subsurface: 0.3,
+            atDistance: 0.4,
+          }),
+          _ = new DisneyMaterial({
+            map: e[19],
+            subsurface: 0.3,
+            atDistance: 0.4,
+          }),
+          z = new DisneyMaterial({
+            map: e[0],
+            subsurface: 0.3,
+            atDistance: 0.4,
+          }),
+          S = new DisneyMaterial({
+            map: e[1],
+          }),
+          w = new DisneyMaterial({
+            map: e[2],
+          }),
+          L = new DisneyMaterial({
+            map: e[3],
+          }),
+          E = new DisneyMaterial({
+            map: e[4],
+          }),
+          y = new DisneyMaterial({
+            map: e[5],
+          }),
+          D = new DisneyMaterial({
+            map: e[6],
+          }),
+          T = new DisneyMaterial({
+            map: e[7],
+          }),
+          v = new DisneyMaterial({
+            map: e[8],
+          }),
+          A = new DisneyMaterial({
+            map: e[9],
+          }),
+          G = new DisneyMaterial({
+            map: e[10],
+          }),
+          F = new DisneyMaterial({
+            map: e[11],
+          }),
+          I = new DisneyMaterial({
+            map: e[12],
+          }),
+          W = new DisneyMaterial({
+            map: e[13],
+          }),
+          O = new DisneyMaterial({
+            map: e[14],
+          });
+        //   Oe = new DisneyMaterial({
+        //     emission: [20, 20, 20],
+        //   });
+        return [
+          {
+            material: null,
+            meshName: [
+              "Plane",
+              "Plane224_Plane005",
+              "Plane223_Plane004",
+              "Plane220_Plane001",
+              "Plane221_Plane002",
+              "Plane222_Plane003",
+            ],
+          },
+          {
+            material: z,
+            meshName: ["1_Cube011"],
+          },
+          {
+            material: S,
+            meshName: ["3_Cube025"],
+          },
+          {
+            material: w,
+            meshName: ["5_Cube027"],
+          },
+          {
+            material: L,
+            meshName: ["6_Cube028"],
+          },
+          {
+            material: p,
+            meshName: ["7_Cube029"],
+          },
+          {
+            material: E,
+            meshName: ["9_Cube031"],
+          },
+          {
+            material: y,
+            meshName: ["10_Cube014"],
+          },
+          {
+            material: D,
+            meshName: ["11_Cube015"],
+          },
+          {
+            material: T,
+            meshName: ["12_Cube016"],
+          },
+          {
+            material: v,
+            meshName: ["13_Cube017"],
+          },
+          {
+            material: A,
+            meshName: ["14_Cube018"],
+          },
+          {
+            material: _,
+            meshName: ["15_small_Cube019"],
+          },
+          {
+            material: w,
+            meshName: ["16_small_Cube020"],
+          },
+          {
+            material: G,
+            meshName: ["17_small_Cube021"],
+          },
+          {
+            material: F,
+            meshName: ["18_Cube022"],
+          },
+          {
+            material: I,
+            meshName: ["19_Cube023"],
+          },
+          {
+            material: W,
+            meshName: ["Plane002_Plane000"],
+          },
+          {
+            material: O,
+            meshName: ["Plane012"],
+          },
+          {
+            material: x,
+            meshName: [
+              "Vildapel_Bamboo_Planter001_Cube034",
+              "Vildapel_Bamboo_Planter_Cube033",
+              "Vildapel_Bamboo_Planter003_Cube036",
+              "Vildapel_Bamboo_Planter002_Cube035",
+            ],
+          },
+          {
+            material: t,
+            meshName: [
+              "BezierCircle000",
+              "BezierCircle001",
+              "BezierCircle002",
+              "BezierCircle003",
+              "BezierCircle004",
+              "BezierCircle005",
+              "BezierCircle006",
+              "BezierCircle007",
+              "BezierCircle008",
+              "BezierCircle009",
+              "BezierCircle010",
+              "BezierCircle011",
+              "BezierCircle012",
+              "BezierCircle013",
+              "BezierCircle014",
+              "BezierCircle015",
+            ],
+          },
+          {
+            material: t,
+            meshName: [
+              "Bolt002_Bolt001",
+              "Bolt001_Bolt000",
+              "Bolt003_Bolt002",
+              "Bolt002_Bolt005",
+            ],
+          },
+          {
+            material: i,
+            meshName: [
+              "Circle002_Circle007",
+              "Circle003_Circle002",
+              "Circle005_Circle008",
+              "Circle007_Circle010",
+            ],
+          },
+          {
+            material: i,
+            meshName: [
+              "Circle000_Circle005",
+              "Circle001",
+              "Circle004_Circle006",
+              "Circle006_Circle009",
+            ],
+          },
+          {
+            material: g,
+            meshName: ["Cube002_Cube", "Cube011_Cube003"],
+          },
+          {
+            material: P,
+            meshName: [
+              "Cube012_Cube010",
+              "Cube005_Cube000",
+              "Cube006_Cube001",
+              "Cube007_Cube012",
+            ],
+          },
+          {
+            material: t,
+            meshName: ["Cube014_Cube024", "Cube015_Cube026"],
+          },
+          {
+            material: h,
+            meshName: ["Cube000_Cube002"],
+          },
+          {
+            material: j,
+            meshName: ["Cube013_Cube004"],
+          },
+          {
+            material: R,
+            meshName: ["Cube003_Cube009", "Cube004_Cube008"],
+          },
+          {
+            material: g,
+            meshName: [
+              "decoration_twig_branch003_Plane007",
+              "decoration_twig_branch004_Plane010",
+              "decoration_twig_branch007_Plane011",
+            ],
+          },
+          {
+            material: h,
+            meshName: ["Cube001_Cube005"],
+          },
+          {
+            material: r,
+            meshName: ["Cube010_Cube013"],
+          },
+          {
+            material: l,
+            meshName: ["Cube008_Cube006", "Cube009_Cube007"],
+          },
+          {
+            material: m,
+            meshName: ["Circle"],
+          },
+          {
+            material: p,
+            meshName: ["17_small002_Cube038"],
+          },
+          {
+            material: _,
+            meshName: ["17_small001_Cube037"],
+          },
+          {
+            material: l,
+            meshName: [
+              "Circle008_Circle004",
+              "Circle009_Circle011",
+              "Circle010_Circle012",
+            ],
+          },
+          {
+            material: g,
+            meshName: ["Cylinder009_Cylinder007"],
+          },
+        ];
+      }
+
+      const envMapPath = "./assets/gray-background-with-dirlight_1k.hdr";
+      const gltfModelPath = "./assets/diningRoom/scene.gltf";
+
+      const renderer = new LGLTracerRenderer({
+        canvasAlpha: true,
+        useWorker: true,
+      });
+
+      renderer.bounces = 3;
+      renderer.envMapIntensity = 1;
+      renderer.enviromentVisible = true;
+      renderer.enableDenoise = true;
+      renderer.enableTemporalDenoise = true;
+      renderer.movingDownsampling = true;
+      renderer.renderWhenOffFocus = true;
+      renderer.useTileRender = true;
+
+      document.body.appendChild(renderer.domElement);
+
+      const scene = new THREE.Scene();
+      const sphereGeometry = new THREE.SphereGeometry(1, 168, 64);
+      // Look here
+      const rayTracingMaterial = new DisneyMaterial({
+        subsurface: 0.6,
+        color: new THREE.Color("orange"),
+        // atDistance: 0.001,
+        // ior: 1.9,
+        emissive: new THREE.Color("red"),
+        // transmission: 0.5,
+        extinction: new THREE.Color("red"),
+      });
+      const sphereMesh = new THREE.Mesh(sphereGeometry, rayTracingMaterial);
+      //sphereMesh.position.z = -10;
+      const camera = new THREE.PerspectiveCamera(
+        45,
+        window.innerWidth / window.innerHeight
+      );
+      camera.position.set(
+        -1.4141610975212875,
+        -0.5500411049703974,
+        -4.76420016089798
+      );
+
+      const controls = new THREE.OrbitControls(camera, renderer.domElement);
+      //  controls.enableDamping = true;
+      const directionalLight = new DirectionalLight(0xffffff, 1);
+      directionalLight.position.y = 1;
+
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      async function init() {
+        // Note that if it is after R136, it needs to be declared as FloatType
+        const rgbeLoader = new THREE.RGBELoader().setDataType(THREE.FloatType);
+        const envMap = await new Promise((resolve) => {
+          rgbeLoader.load(envMapPath, resolve);
+        });
+        scene.environment = envMap;
+
+        const gltfLoader = new THREE.GLTFLoader();
+        const gltfInfo = await new Promise((resolve) => {
+          gltfLoader.load(gltfModelPath, resolve);
+        });
+        const i = await oe();
+        gltfInfo.scene.traverse((t) => {
+          t.isMesh &&
+            i.forEach((l) => {
+              const r = l.meshName,
+                m = l.material;
+              if (~r.indexOf(t.name)) {
+                m ? (t.material = m) : (t.visible = !1);
+                return;
+              }
+            });
+        }),
+          gltfInfo.scene.traverse((t) => {
+            if (t.isMesh && t.material) {
+              if (t.material.isRayTracingMaterial) return;
+              t.material.isMeshStandardMaterial
+                ? (t.material = new DisneyMaterial().fromStandardMaterial(
+                    t.material
+                  ))
+                : (t.material = new DisneyMaterial());
+            }
+          });
+
+        scene.add(gltfInfo.scene, sphereMesh, directionalLight);
+
+        await renderer.buildScene(scene, camera).then(() => {
+          tick();
+        });
+      }
+
+      function tick() {
+        renderer.render(scene, camera);
+        controls.update();
+        requestAnimationFrame(tick);
+      }
+
+      init();
+
+      function ce() {
+        renderer.setDenoiseColorFactor(0.4),
+          renderer.setDenoisePositionFactor(0.2);
+      }
+
+      // renderer.fullSampleCallback = () => {
+      //   offScreenCtx.drawImage(renderer.domElement, 0, 0);
+      //   const fullSampleImgData = offScreenCanvas.toDataURL(`image/jpeg`);
+      // };
+
+      renderer.loadingCallback = {
+        onProgress: (e) => console.log(e),
+        onComplete: (e) => {
+          console.log(e), ce();
+        },
+      };
+    </script>
+  </body>
+</html>

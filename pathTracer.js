@@ -77,15 +77,15 @@ var __defProp = Object.defineProperty,
   //fullscreenQuad.vert
   var fullscreenQuad = {
     source: `
-      layout(location = 0) in vec2 a_position;
-    
-      out vec2 vCoord;
-    
-      void main() {
-        vCoord = a_position;
-        gl_Position = vec4(2. * a_position - 1., 0, 1);
-      }
-    `,
+    layout(location = 0) in vec2 a_position;
+  
+    out vec2 vCoord;
+  
+    void main() {
+      vCoord = a_position;
+      gl_Position = vec4(2. * a_position - 1., 0, 1);
+    }
+  `,
   };
 
   //glUtils
@@ -431,34 +431,43 @@ var __defProp = Object.defineProperty,
     return __spreadProps(
       __spreadValues(
         {},
-        (function (e, t) {
-          const a = makeUniformSetter(e, t),
-            n = {};
-          let i = 1;
-          console.log(a);
-          function r() {
-            for (let t in n) {
-              const { tex: a, unit: i } = n[t];
-              e.activeTexture(e.TEXTURE0 + i),
-                e.bindTexture(a.target, a.texture);
+        (function (gl, program) {
+          const uniformSetter = makeUniformSetter(gl, program);
+
+          const textures = {};
+          let nextTexUnit = 1;
+
+          function setTexture(name, texture) {
+            if (texture) {
+              if (textures[name]) {
+                textures[name].tex = texture;
+              } else {
+                const unit = nextTexUnit++;
+                uniformSetter.setUniform(name, unit);
+                textures[name] = { unit, tex: texture };
+              }
             }
           }
+
+          function bindTextures() {
+            for (let name in textures) {
+              const { tex, unit } = textures[name];
+              gl.activeTexture(gl.TEXTURE0 + unit);
+              gl.bindTexture(tex.target, tex.texture);
+            }
+          }
+
           return {
-            attribLocs: getAttributes(e, t),
-            bindTextures: r,
-            program: t,
-            setTexture: function (e, t) {
-              if (t)
-                if (n[e]) n[e].tex = t;
-                else {
-                  const o = i++;
-                  a.setUniform(e, o), (n[e] = { unit: o, tex: t });
-                }
-            },
-            setUniform: a.setUniform,
-            textures: n,
-            useProgram: function (n = !0) {
-              e.useProgram(t), a.upload(), n && r();
+            attribLocs: getAttributes(gl, program),
+            bindTextures,
+            program,
+            setTexture,
+            setUniform: uniformSetter.setUniform,
+            textures,
+            useProgram: function (textures = !0) {
+              gl.useProgram(program),
+                uniformSetter.upload(),
+                textures && bindTextures();
             },
           };
         })(gl, program)

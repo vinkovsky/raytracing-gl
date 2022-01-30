@@ -477,34 +477,34 @@
         });
         scene.environment = envMap;
 
-        const gltfLoader = new THREE.GLTFLoader();
-        const gltfInfo = await new Promise((resolve) => {
-          gltfLoader.load(gltfModelPath, resolve);
-        });
-        const i = await oe();
-        gltfInfo.scene.traverse((t) => {
-          t.isMesh &&
-            i.forEach((l) => {
-              const r = l.meshName,
-                m = l.material;
-              if (~r.indexOf(t.name)) {
-                m ? (t.material = m) : (t.visible = !1);
-                return;
-              }
-            });
-        }),
-          gltfInfo.scene.traverse((t) => {
-            if (t.isMesh && t.material) {
-              if (t.material.isRayTracingMaterial) return;
-              t.material.isMeshStandardMaterial
-                ? (t.material = new DisneyMaterial().fromStandardMaterial(
-                    t.material
-                  ))
-                : (t.material = new DisneyMaterial());
-            }
-          });
+        // const gltfLoader = new THREE.GLTFLoader();
+        // const gltfInfo = await new Promise((resolve) => {
+        //   gltfLoader.load(gltfModelPath, resolve);
+        // });
+        // const i = await oe();
+        // gltfInfo.scene.traverse((t) => {
+        //   t.isMesh &&
+        //     i.forEach((l) => {
+        //       const r = l.meshName,
+        //         m = l.material;
+        //       if (~r.indexOf(t.name)) {
+        //         m ? (t.material = m) : (t.visible = !1);
+        //         return;
+        //       }
+        //     });
+        // }),
+        //   gltfInfo.scene.traverse((t) => {
+        //     if (t.isMesh && t.material) {
+        //       if (t.material.isRayTracingMaterial) return;
+        //       t.material.isMeshStandardMaterial
+        //         ? (t.material = new DisneyMaterial().fromStandardMaterial(
+        //             t.material
+        //           ))
+        //         : (t.material = new DisneyMaterial());
+        //     }
+        //   });
 
-        scene.add(gltfInfo.scene, sphereMesh, directionalLight);
+        scene.add(sphereMesh, directionalLight);
 
         await renderer.buildScene(scene, camera).then(() => {
           tick();
@@ -520,8 +520,8 @@
       init();
 
       function ce() {
-        renderer.setDenoiseColorFactor(0.4),
-          renderer.setDenoisePositionFactor(0.2);
+        renderer.setDenoiseColorFactor(0.4);
+        renderer.setDenoisePositionFactor(0.2);
       }
 
       // renderer.fullSampleCallback = () => {

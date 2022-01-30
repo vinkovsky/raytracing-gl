@@ -417,6 +417,51 @@ var __defProp = Object.defineProperty,
     return makeShaderStage(gl, gl.FRAGMENT_SHADER, fragment, defines);
   }
 
+  function makeRenderPassFromProgram(gl, program) {
+    const uniformSetter = makeUniformSetter(gl, program);
+
+    const textures = {};
+    let nextTexUnit = 1;
+
+    function setTexture(name, texture) {
+      if (texture) {
+        if (textures[name]) {
+          textures[name].tex = texture;
+        } else {
+          const unit = nextTexUnit++;
+          uniformSetter.setUniform(name, unit);
+          textures[name] = { unit, tex: texture };
+        }
+      }
+    }
+
+    function bindTextures() {
+      for (let name in textures) {
+        const { tex, unit } = textures[name];
+        gl.activeTexture(gl.TEXTURE0 + unit);
+        gl.bindTexture(tex.target, tex.texture);
+      }
+    }
+
+    function useProgram(autoBindTextures = true) {
+      gl.useProgram(program);
+      uniformSetter.upload();
+      if (autoBindTextures) {
+        bindTextures();
+      }
+    }
+
+    return {
+      attribLocs: getAttributes(gl, program),
+      bindTextures,
+      program,
+      setTexture,
+      setUniform: uniformSetter.setUniform,
+      textures,
+      useProgram,
+    };
+  }
+
   function makeRenderPass(gl, params) {
     const { fragment, vertex } = params;
     const vertexCompiled =
@@ -428,252 +473,328 @@ var __defProp = Object.defineProperty,
 
     const program = createProgram(gl, vertexCompiled, fragmentCompiled);
 
-    return __spreadProps(
-      __spreadValues(
-        {},
-        (function (gl, program) {
-          const uniformSetter = makeUniformSetter(gl, program);
-
-          const textures = {};
-          let nextTexUnit = 1;
-
-          function setTexture(name, texture) {
-            if (texture) {
-              if (textures[name]) {
-                textures[name].tex = texture;
-              } else {
-                const unit = nextTexUnit++;
-                uniformSetter.setUniform(name, unit);
-                textures[name] = { unit, tex: texture };
-              }
-            }
-          }
-
-          function bindTextures() {
-            for (let name in textures) {
-              const { tex, unit } = textures[name];
-              gl.activeTexture(gl.TEXTURE0 + unit);
-              gl.bindTexture(tex.target, tex.texture);
-            }
-          }
-
-          return {
-            attribLocs: getAttributes(gl, program),
-            bindTextures,
-            program,
-            setTexture,
-            setUniform: uniformSetter.setUniform,
-            textures,
-            useProgram: function (textures = !0) {
-              gl.useProgram(program),
-                uniformSetter.upload(),
-                textures && bindTextures();
-            },
-          };
-        })(gl, program)
-      ),
-      {
-        outputLocs: fragment.outputs
-          ? getOutputLocations(fragment.outputs)
-          : {},
-      }
-    );
+    return {
+      ...makeRenderPassFromProgram(gl, program),
+      outputLocs: fragment.outputs ? getOutputLocations(fragment.outputs) : {},
+    };
   }
-  function v(e, t, a) {
-    return Math.min(Math.max(e, t), a);
+
+  //util
+  function clamp(x, min, max) {
+    return Math.min(Math.max(x, min), max);
   }
-  function A(e, t) {
+
+  //Texture
+  function getFormat(gl, channels) {
+    const map = {
+      1: gl.RED,
+      2: gl.RG,
+      3: gl.RGB,
+      4: gl.RGBA,
+    };
+    return map[channels];
+  }
+
+  function getTextureFormat(gl, channels, storage, data, gammaCorrection) {
+    let type;
+    let internalFormat;
+    const isByteArray =
+      data instanceof Uint8Array ||
+      data instanceof HTMLImageElement ||
+      data instanceof HTMLCanvasElement ||
+      data instanceof ImageData ||
+      data instanceof ImageBitmap;
+
+    const isFloatArray = data instanceof Float32Array;
+
+    if (storage === "byte" || (!storage && isByteArray)) {
+      internalFormat = {
+        1: gl.R8,
+        2: gl.RG8,
+        3: gammaCorrection ? gl.SRGB8 : gl.RGB8,
+        4: gammaCorrection ? gl.SRGB8_ALPHA8 : gl.RGBA8,
+      }[channels];
+
+      type = gl.UNSIGNED_BYTE;
+    } else if (storage === "float" || (!storage && isFloatArray)) {
+      internalFormat = {
+        1: gl.R32F,
+        2: gl.RG32F,
+        3: gl.RGB32F,
+        4: gl.RGBA32F,
+      }[channels];
+
+      type = gl.FLOAT;
+    } else if (storage === "halfFloat") {
+      internalFormat = {
+        1: gl.R16F,
+        2: gl.RG16F,
+        3: gl.RGB16F,
+        4: gl.RGBA16F,
+      }[channels];
+
+      type = gl.HALF_FLOAT;
+    } else if (storage === "snorm") {
+      internalFormat = {
+        1: gl.R8_SNORM,
+        2: gl.RG8_SNORM,
+        3: gl.RGB8_SNORM,
+        4: gl.RGBA8_SNORM,
+      }[channels];
+
+      type = gl.UNSIGNED_BYTE;
+    }
+
+    const format = getFormat(gl, channels);
+
+    return { format, internalFormat, type };
+  }
+
+  function makeTexture(gl, params) {
     let {
-      width: a = null,
-      height: n = null,
-      data: i = null,
-      length: o = 1,
-      channels: r = null,
-      storage: s = null,
-      flipY: l = !1,
-      gammaCorrection: f = !1,
-      wrapS: d = e.CLAMP_TO_EDGE,
-      wrapT: c = e.CLAMP_TO_EDGE,
-      minFilter: u = e.NEAREST,
-      magFilter: p = e.NEAREST,
-    } = t;
-    (a = a || i.width || 0), (n = n || i.height || 0);
-    const m = e.createTexture();
-    let L, x;
-    Array.isArray(i) && ((x = i), (i = x[0])),
-      (L = x || o > 1 ? e.TEXTURE_2D_ARRAY : e.TEXTURE_2D),
-      e.activeTexture(e.TEXTURE0),
-      e.bindTexture(L, m),
-      e.texParameteri(L, e.TEXTURE_WRAP_S, d),
-      e.texParameteri(L, e.TEXTURE_WRAP_T, c),
-      e.texParameteri(L, e.TEXTURE_MIN_FILTER, u),
-      e.texParameteri(L, e.TEXTURE_MAG_FILTER, p),
-      r || (r = i && i.length ? i.length / (a * n) : 4),
-      (r = v(r, 1, 4));
-    const {
-      type: h,
-      format: A,
-      internalFormat: g,
-    } = (function (e, t, a, n, i) {
-      let o, r;
-      const s =
-          n instanceof Uint8Array ||
-          n instanceof HTMLImageElement ||
-          n instanceof HTMLCanvasElement ||
-          n instanceof ImageData ||
-          n instanceof ImageBitmap,
-        l = n instanceof Float32Array;
-      "byte" === a || (!a && s)
-        ? ((r = {
-            1: e.R8,
-            2: e.RG8,
-            3: i ? e.SRGB8 : e.RGB8,
-            4: i ? e.SRGB8_ALPHA8 : e.RGBA8,
-          }[t]),
-          (o = e.UNSIGNED_BYTE))
-        : "float" === a || (!a && l)
-        ? ((r = { 1: e.R32F, 2: e.RG32F, 3: e.RGB32F, 4: e.RGBA32F }[t]),
-          (o = e.FLOAT))
-        : "halfFloat" === a
-        ? ((r = { 1: e.R16F, 2: e.RG16F, 3: e.RGB16F, 4: e.RGBA16F }[t]),
-          (o = e.HALF_FLOAT))
-        : "snorm" === a &&
-          ((r = {
-            1: e.R8_SNORM,
-            2: e.RG8_SNORM,
-            3: e.RGB8_SNORM,
-            4: e.RGBA8_SNORM,
-          }[t]),
-          (o = e.UNSIGNED_BYTE));
-      return { format: _(e, t), internalFormat: r, type: o };
-    })(e, r, s, i, f);
-    if (x) {
-      e.texStorage3D(L, 1, g, a, n, x.length);
-      for (let t = 0; t < x.length; t++) {
-        const i = x[t].width || a,
-          o = x[t].height || n;
-        e.pixelStorei(e.UNPACK_FLIP_Y_WEBGL, Array.isArray(l) ? l[t] : l),
-          e.texSubImage3D(L, 0, 0, 0, t, i, o, 1, A, h, x[t]);
+      width = null,
+      height = null,
+
+      // A single HTMLImageElement, ImageData, or TypedArray,
+      // Or an array of any of these objects. In this case an Array Texture will be created
+      data = null,
+
+      // If greater than 1, create an Array Texture of this length
+      length = 1,
+
+      // Number of channels, [1-4]. If left blank, the the function will decide the number of channels automatically from the data
+      channels = null,
+
+      // Either 'byte' or 'float'
+      // If left empty, the function will decide the format automatically from the data
+      storage = null,
+
+      // Reverse the texture across the y-axis.
+      flipY = false,
+
+      // sampling properties
+      gammaCorrection = false,
+      wrapS = gl.CLAMP_TO_EDGE,
+      wrapT = gl.CLAMP_TO_EDGE,
+      minFilter = gl.NEAREST,
+      magFilter = gl.NEAREST,
+    } = params;
+
+    width = width || data.width || 0;
+    height = height || data.height || 0;
+
+    const texture = gl.createTexture();
+
+    let target;
+    let dataArray;
+
+    // if data is a JS array but not a TypedArray, assume data is an array of images and create a GL Array Texture
+    if (Array.isArray(data)) {
+      dataArray = data;
+      data = dataArray[0];
+    }
+
+    target = dataArray || length > 1 ? gl.TEXTURE_2D_ARRAY : gl.TEXTURE_2D;
+
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(target, texture);
+
+    gl.texParameteri(target, gl.TEXTURE_WRAP_S, wrapS);
+    gl.texParameteri(target, gl.TEXTURE_WRAP_T, wrapT);
+    gl.texParameteri(target, gl.TEXTURE_MIN_FILTER, minFilter);
+    gl.texParameteri(target, gl.TEXTURE_MAG_FILTER, magFilter);
+
+    if (!channels) {
+      if (data && data.length) {
+        channels = data.length / (width * height); // infer number of channels from data size
+      } else {
+        channels = 4;
       }
-    } else o > 1 ? e.texStorage3D(L, 1, g, a, n, o) : (e.pixelStorei(e.UNPACK_FLIP_Y_WEBGL, l), e.texStorage2D(L, 1, g, a, n), i && e.texSubImage2D(L, 0, 0, 0, a, n, A, h, i));
-    return e.pixelStorei(e.UNPACK_FLIP_Y_WEBGL, !1), { target: L, texture: m };
-  }
-  function _(e, t) {
-    return { 1: e.RED, 2: e.RG, 3: e.RGB, 4: e.RGBA }[t];
-  }
-  class g extends t.Material {
-    constructor() {
-      super(), (this.materialType = null), (this.isRayTracingMaterial = !0);
     }
-    copy(e) {
-      super.copy(e),
-        (this.materialType = e.materialType),
-        (this.isRayTracingMaterial = e.isRayTracingMaterial);
-    }
-  }
-  class S extends g {
-    constructor(e) {
-      super(),
-        (this.materialType = "Disney"),
-        (this.workflow = "Metalness"),
-        (this.color = new t.Color(16777215)),
-        (this.roughness = 0.5),
-        (this.metalness = 0),
-        (this.map = null),
-        (this.emissive = new t.Color(0)),
-        (this.emissiveMap = null),
-        (this.normalMap = null),
-        (this.normalScale = new t.Vector2(1, 1)),
-        (this.roughnessMap = null),
-        (this.metalnessMap = null),
-        (this.specularTint = 0),
-        (this.sheen = 0),
-        (this.sheenTint = 0.5),
-        (this.clearcoat = 0),
-        (this.clearcoatRoughness = 0),
-        (this.subsurface = 0),
-        (this.alpha = 1),
-        (this.ior = 1.5),
-        (this.transmission = 0),
-        (this.atDistance = 1),
-        (this.extinction = new t.Color(16777215)),
-        (this.anisotropic = 0),
-        (this.specularColor = new t.Color(16777215)),
-        (this.glossiness = 1),
-        (this.specularMap = null),
-        (this.glossinessMap = null),
-        this.setValues(e);
-    }
-    copy(e) {
-      return (
-        (this.color = new t.Color().copy(e.color)),
-        (this.roughness = e.roughness),
-        (this.metalness = e.metalness),
-        (this.map = e.map),
-        (this.emissive = new t.Color().copy(e.emissive)),
-        (this.emissiveMap = e.emissiveMap),
-        (this.normalMap = e.normalMap),
-        (this.normalScale = new t.Vector2().copy(e.normalScale)),
-        (this.roughnessMap = e.roughnessMap),
-        (this.metalnessMap = e.metalnessMap),
-        (this.specularTint = e.specularTint),
-        (this.sheen = e.sheen),
-        (this.sheenTint = e.sheenTint),
-        (this.clearcoat = e.clearcoat),
-        (this.clearcoatRoughness = e.clearcoatRoughness),
-        (this.subsurface = e.subsurface),
-        (this.transmission = e.transmission),
-        (this.ior = e.ior),
-        (this.atDistance = e.atDistance),
-        (this.anisotropic = e.anisotropic),
-        (this.extinction = new t.Color().copy(e.extinction)),
-        (this.alpha = e.alpha),
-        this
+
+    channels = clamp(channels, 1, 4);
+
+    const { type, format, internalFormat } = getTextureFormat(
+      gl,
+      channels,
+      storage,
+      data,
+      gammaCorrection
+    );
+
+    if (dataArray) {
+      gl.texStorage3D(
+        target,
+        1,
+        internalFormat,
+        width,
+        height,
+        dataArray.length
       );
+      for (let i = 0; i < dataArray.length; i++) {
+        // if layer is an HTMLImageElement, use the .width and .height properties of each layer
+        // otherwise use the max size of the array texture
+        const layerWidth = dataArray[i].width || width;
+        const layerHeight = dataArray[i].height || height;
+
+        gl.pixelStorei(
+          gl.UNPACK_FLIP_Y_WEBGL,
+          Array.isArray(flipY) ? flipY[i] : flipY
+        ),
+          gl.texSubImage3D(
+            target,
+            0,
+            0,
+            0,
+            i,
+            layerWidth,
+            layerHeight,
+            1,
+            format,
+            type,
+            dataArray[i]
+          );
+      }
+    } else if (length > 1) {
+      // create empty array texture
+      gl.texStorage3D(target, 1, internalFormat, width, height, length);
+    } else {
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, flipY);
+      gl.texStorage2D(target, 1, internalFormat, width, height);
+
+      if (data) {
+        gl.texSubImage2D(target, 0, 0, 0, width, height, format, type, data);
+      }
     }
+    // return state to default
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+
+    return { target, texture };
+  }
+
+  //RayTracingMaterial
+  class RayTracingMaterial extends THREE.Material {
+    constructor() {
+      super();
+      this.materialType = null;
+      this.isRayTracingMaterial = true;
+    }
+
+    copy(source) {
+      super.copy(source);
+      this.materialType = source.materialType;
+      this.isRayTracingMaterial = source.isRayTracingMaterial;
+    }
+  }
+
+  //DisneyMaterial
+  class DisneyMaterial extends RayTracingMaterial {
+    constructor(parameters) {
+      super();
+      this.materialType = "Disney";
+      this.workflow = "Metalness";
+      this.color = new THREE.Color(16777215);
+      this.roughness = 0.5;
+      this.metalness = 0;
+      this.map = null;
+      this.emissive = new THREE.Color(0);
+      this.emissiveMap = null;
+      this.normalMap = null;
+      this.normalScale = new THREE.Vector2(1, 1);
+      this.roughnessMap = null;
+      this.metalnessMap = null;
+      this.specularTint = 0;
+      this.sheen = 0;
+      this.sheenTint = 0.5;
+      this.clearcoat = 0;
+      this.clearcoatRoughness = 0;
+      this.subsurface = 0;
+      this.alpha = 1;
+      this.ior = 1.5;
+      this.transmission = 0;
+      this.atDistance = 1;
+      this.extinction = new THREE.Color(16777215);
+      this.anisotropic = 0;
+      this.specularColor = new THREE.Color(16777215);
+      this.glossiness = 1;
+      this.specularMap = null;
+      this.glossinessMap = null;
+      this.setValues(parameters);
+    }
+
+    copy(source) {
+      this.color = new THREE.Color().copy(source.color);
+      this.roughness = source.roughness;
+      this.metalness = source.metalness;
+      this.map = source.map;
+      this.emissive = new THREE.Color().copy(source.emissive);
+      this.emissiveMap = source.emissiveMap;
+      this.normalMap = source.normalMap;
+      this.normalScale = new THREE.Vector2().copy(source.normalScale);
+      this.roughnessMap = source.roughnessMap;
+      this.metalnessMap = source.metalnessMap;
+      this.specularTint = source.specularTint;
+      this.sheen = source.sheen;
+      this.sheenTint = source.sheenTint;
+      this.clearcoat = source.clearcoat;
+      this.clearcoatRoughness = source.clearcoatRoughness;
+      this.subsurface = source.subsurface;
+      this.transmission = source.transmission;
+      this.ior = source.ior;
+      this.atDistance = source.atDistance;
+      this.anisotropic = source.anisotropic;
+      this.extinction = new THREE.Color().copy(source.extinction);
+      this.alpha = source.alpha;
+
+      return this;
+    }
+
     clone() {
       return new this.constructor().copy(this);
     }
-    fromBasicMaterial(e) {
+
+    fromBasicMaterial(source) {
       const t = new this.constructor();
       return (
-        (t.name = e.name),
-        e.color && t.color.copy(e.color),
-        e.map && (t.map = e.map),
+        (t.name = source.name),
+        source.color && t.color.copy(source.color),
+        source.map && (t.map = source.map),
         t
       );
     }
-    fromStandardMaterial(e) {
+
+    fromStandardMaterial(source) {
       const t = new this.constructor();
       return (
-        (t.name = e.name),
-        t.color.copy(e.color),
-        (t.roughness = e.roughness),
-        (t.metalness = e.metalness),
-        (t.transmission = e.transmission || 0),
-        (t.ior = e.ior || 1.5),
-        (t.clearcoat = e.clearcoat || 0),
-        (t.clearcoatRoughness = e.clearcoatRoughness || 0),
-        (t.sheen = e.sheen || 0),
-        (t.sheenTint = e.sheenTint || 0.5),
-        (t.alpha = e.opacity),
-        (t.map = e.map),
-        t.emissive.copy(e.emissive),
-        (t.emissiveMap = e.emissiveMap),
-        (t.normalMap = e.normalMap),
-        t.normalScale.copy(e.normalScale),
-        (t.roughnessMap = e.roughnessMap),
-        (t.metalnessMap = e.metalnessMap),
-        e.isGLTFSpecularGlossinessMaterial &&
+        (t.name = source.name),
+        t.color.copy(source.color),
+        (t.roughness = source.roughness),
+        (t.metalness = source.metalness),
+        (t.transmission = source.transmission || 0),
+        (t.ior = source.ior || 1.5),
+        (t.clearcoat = source.clearcoat || 0),
+        (t.clearcoatRoughness = source.clearcoatRoughness || 0),
+        (t.sheen = source.sheen || 0),
+        (t.sheenTint = source.sheenTint || 0.5),
+        (t.alpha = source.opacity),
+        (t.map = source.map),
+        t.emissive.copy(source.emissive),
+        (t.emissiveMap = source.emissiveMap),
+        (t.normalMap = source.normalMap),
+        t.normalScale.copy(source.normalScale),
+        (t.roughnessMap = source.roughnessMap),
+        (t.metalnessMap = source.metalnessMap),
+        source.isGLTFSpecularGlossinessMaterial &&
           ((t.workflow = "Specular"),
-          t.specularColor.copy(e.specular),
-          (t.glossiness = e.glossiness),
-          (t.specularMap = e.specularMap),
-          (t.glossinessMap = e.glossinessMap)),
+          t.specularColor.copy(source.specular),
+          (t.glossiness = source.glossiness),
+          (t.specularMap = source.specularMap),
+          (t.glossinessMap = source.glossinessMap)),
         t
       );
     }
   }
+
   function M(e) {
     const t = {};
     return (
@@ -720,9 +841,13 @@ var __defProp = Object.defineProperty,
         (e.geometry
           ? e.material
             ? (e.material.isMeshStandardMaterial
-                ? (e.material = new S().fromStandardMaterial(e.material))
+                ? (e.material = new DisneyMaterial().fromStandardMaterial(
+                    e.material
+                  ))
                 : e.material.isRayTracingMaterial ||
-                  (e.material = new S().fromBasicMaterial(e.material)),
+                  (e.material = new DisneyMaterial().fromBasicMaterial(
+                    e.material
+                  )),
               n.push(e))
             : console.warn(e, "must have a material property.")
           : console.warn(e, "must have a geometry property")),
@@ -1087,7 +1212,7 @@ var __defProp = Object.defineProperty,
         return { maxSize: t, relativeSizes: a };
       })(i);
     return {
-      texture: A(e, {
+      texture: makeTexture(e, {
         width: r.width,
         height: r.height,
         gammaCorrection: a,
@@ -1638,7 +1763,11 @@ var __defProp = Object.defineProperty,
   }
   function ee(e, t, a) {
     const n = $(t.length / a);
-    return A(e, { data: te(t, a * n.size), width: n.columns, height: n.rows });
+    return makeTexture(e, {
+      data: te(t, a * n.size),
+      width: n.columns,
+      height: n.rows,
+    });
   }
   function te(e, t) {
     const a = new e.constructor(t);
@@ -1798,7 +1927,7 @@ var __defProp = Object.defineProperty,
       }),
       p = [];
     function m(e) {
-      (p.length = 0), (e = v(e, 2, 8));
+      (p.length = 0), (e = clamp(e, 2, 8));
       for (let t = 1; t <= e; t++) p.push(2, 2, 2, 2), t >= 2 && p.push(1);
       u.setUniform("bounces", e), c && (c.strataCount = -1);
     }
@@ -1816,7 +1945,7 @@ var __defProp = Object.defineProperty,
           );
         })(n);
         if (t) {
-          const n = A(e, {
+          const n = makeTexture(e, {
             data: t.data,
             storage: t.dataFormat,
             minFilter: a ? e.LINEAR : e.NEAREST,
@@ -1828,7 +1957,7 @@ var __defProp = Object.defineProperty,
           const i = H(t);
           u.setTexture(
             "envMapDistribution",
-            A(e, {
+            makeTexture(e, {
               data: i.data,
               storage: "float",
               width: i.width,
@@ -1894,7 +2023,7 @@ var __defProp = Object.defineProperty,
         setNoise: function (t) {
           u.setTexture(
             "noiseTex",
-            A(e, {
+            makeTexture(e, {
               data: t,
               wrapS: e.REPEAT,
               wrapT: e.REPEAT,
@@ -2045,7 +2174,7 @@ var __defProp = Object.defineProperty,
       setSize: function (t, a) {
         o = makeFramebuffer(e, {
           color: {
-            0: A(e, {
+            0: makeTexture(e, {
               width: t,
               height: a,
               storage: "byte",
@@ -2134,7 +2263,7 @@ var __defProp = Object.defineProperty,
           const o = () =>
             makeFramebuffer(e, {
               color: {
-                0: A(e, {
+                0: makeTexture(e, {
                   width: t,
                   height: a,
                   storage: "float",
@@ -2182,7 +2311,7 @@ var __defProp = Object.defineProperty,
               (!(function () {
                 const e = 21 - o / s;
                 (d += 5e3 * Math.sign(e) * Math.sqrt(Math.abs(e))),
-                  (d = v(d, 8192, l * f));
+                  (d = clamp(d, 8192, l * f));
               })(),
               c()),
             (o = 0),
@@ -2240,13 +2369,13 @@ var __defProp = Object.defineProperty,
           })(e);
         function l() {
           const e = a / n;
-          (i = Math.round(v(Math.sqrt(s * e), 1, a))),
-            (o = Math.round(v(i / e, 1, n))),
+          (i = Math.round(clamp(Math.sqrt(s * e), 1, a))),
+            (o = Math.round(clamp(i / e, 1, n))),
             r.set(i / a, o / n);
         }
         return {
           adjustSize: function (e) {
-            e && ((s += 600 * (20 - e)), (s = v(s, 8192, a * n)), l());
+            e && ((s += 600 * (20 - e)), (s = clamp(s, 8192, a * n)), l());
           },
           setSize: function (e, t) {
             (a = e), (n = t), l();
@@ -2561,7 +2690,7 @@ var __defProp = Object.defineProperty,
           (function (t, a) {
             (k = makeFramebuffer(e, {
               color: {
-                0: A(e, {
+                0: makeTexture(e, {
                   width: t,
                   height: a,
                   storage: "float",
@@ -2574,14 +2703,14 @@ var __defProp = Object.defineProperty,
             const n = () =>
               makeFramebuffer(e, {
                 color: {
-                  0: A(e, {
+                  0: makeTexture(e, {
                     width: t,
                     height: a,
                     storage: "float",
                     magFilter: e.LINEAR,
                     minFilter: e.LINEAR,
                   }),
-                  1: A(e, {
+                  1: makeTexture(e, {
                     width: t,
                     height: a,
                     storage: "float",
@@ -2592,8 +2721,12 @@ var __defProp = Object.defineProperty,
                 },
               });
             (K = n()), (q = n());
-            const i = A(e, { width: t, height: a, storage: "halfFloat" }),
-              o = A(e, { width: t, height: a, storage: "float" }),
+            const i = makeTexture(e, {
+                width: t,
+                height: a,
+                storage: "halfFloat",
+              }),
+              o = makeTexture(e, { width: t, height: a, storage: "float" }),
               r = (function (e, t, a) {
                 const n = e.createRenderbuffer(),
                   i = e.RENDERBUFFER;
@@ -2612,7 +2745,11 @@ var __defProp = Object.defineProperty,
               s = () =>
                 makeFramebuffer(e, {
                   color: {
-                    0: A(e, { width: t, height: a, storage: "float" }),
+                    0: makeTexture(e, {
+                      width: t,
+                      height: a,
+                      storage: "float",
+                    }),
                     1: i,
                     2: o,
                   },
@@ -2723,7 +2860,7 @@ var __defProp = Object.defineProperty,
     }
   }
   (e.DirectionalLight = ge),
-    (e.DisneyMaterial = S),
+    (e.DisneyMaterial = DisneyMaterial),
     (e.LGLTracerRenderer = class {
       constructor(e = {}) {
         (this.canvas = e.canvas || document.createElement("canvas")),

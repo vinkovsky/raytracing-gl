@@ -755,43 +755,50 @@ var __defProp = Object.defineProperty,
 
     fromBasicMaterial(source) {
       const t = new this.constructor();
-      return (
-        (t.name = source.name),
-        source.color && t.color.copy(source.color),
-        source.map && (t.map = source.map),
-        t
-      );
+
+      t.name = source.name;
+
+      if (source.color) {
+        t.color.copy(source.color);
+      }
+      if (source.map) {
+        t.map = source.map;
+      }
+
+      return t;
     }
 
     fromStandardMaterial(source) {
       const t = new this.constructor();
-      return (
-        (t.name = source.name),
-        t.color.copy(source.color),
-        (t.roughness = source.roughness),
-        (t.metalness = source.metalness),
-        (t.transmission = source.transmission || 0),
-        (t.ior = source.ior || 1.5),
-        (t.clearcoat = source.clearcoat || 0),
-        (t.clearcoatRoughness = source.clearcoatRoughness || 0),
-        (t.sheen = source.sheen || 0),
-        (t.sheenTint = source.sheenTint || 0.5),
-        (t.alpha = source.opacity),
-        (t.map = source.map),
-        t.emissive.copy(source.emissive),
-        (t.emissiveMap = source.emissiveMap),
-        (t.normalMap = source.normalMap),
-        t.normalScale.copy(source.normalScale),
-        (t.roughnessMap = source.roughnessMap),
-        (t.metalnessMap = source.metalnessMap),
-        source.isGLTFSpecularGlossinessMaterial &&
-          ((t.workflow = "Specular"),
-          t.specularColor.copy(source.specular),
-          (t.glossiness = source.glossiness),
-          (t.specularMap = source.specularMap),
-          (t.glossinessMap = source.glossinessMap)),
-        t
-      );
+
+      t.name = source.name;
+      t.color.copy(source.color);
+      t.roughness = source.roughness;
+      t.metalness = source.metalness;
+      t.transmission = source.transmission || 0;
+      t.ior = source.ior || 1.5;
+      t.clearcoat = source.clearcoat || 0;
+      t.clearcoatRoughness = source.clearcoatRoughness || 0;
+      t.sheen = source.sheen || 0;
+      t.sheenTint = source.sheenTint || 0.5;
+      t.alpha = source.opacity;
+      t.map = source.map;
+      t.emissive.copy(source.emissive);
+      t.emissiveMap = source.emissiveMap;
+      t.normalMap = source.normalMap;
+      t.normalScale.copy(source.normalScale);
+      t.roughnessMap = source.roughnessMap;
+      t.metalnessMap = source.metalnessMap;
+
+      if (source.isGLTFSpecularGlossinessMaterial) {
+        t.workflow = "Specular";
+        t.specularColor.copy(source.specular);
+        t.glossiness = source.glossiness;
+        t.specularMap = source.specularMap;
+        t.glossinessMap = source.glossinessMap;
+      }
+
+      return t;
     }
   }
 

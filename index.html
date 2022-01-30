@@ -442,7 +442,7 @@
       const scene = new THREE.Scene();
       const sphereGeometry = new THREE.SphereGeometry(1, 168, 64);
       // Look here
-      const rayTracingMaterial = new DisneyMaterial({
+      const rayTracingMaterial = new THREE.MeshStandardMaterial({
         subsurface: 0.6,
         color: new THREE.Color("orange"),
         // atDistance: 0.001,

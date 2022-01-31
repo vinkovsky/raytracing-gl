@@ -498,6 +498,7 @@ var __defProp = Object.defineProperty,
   function getTextureFormat(gl, channels, storage, data, gammaCorrection) {
     let type;
     let internalFormat;
+
     const isByteArray =
       data instanceof Uint8Array ||
       data instanceof HTMLImageElement ||
@@ -754,187 +755,235 @@ var __defProp = Object.defineProperty,
     }
 
     fromBasicMaterial(source) {
-      const t = new this.constructor();
+      const DisneyMaterial = new this.constructor();
 
-      t.name = source.name;
+      DisneyMaterial.name = source.name;
 
       if (source.color) {
-        t.color.copy(source.color);
+        DisneyMaterial.color.copy(source.color);
       }
       if (source.map) {
-        t.map = source.map;
+        DisneyMaterial.map = source.map;
       }
 
-      return t;
+      return DisneyMaterial;
     }
 
     fromStandardMaterial(source) {
-      const t = new this.constructor();
+      const DisneyMaterial = new this.constructor();
 
-      t.name = source.name;
-      t.color.copy(source.color);
-      t.roughness = source.roughness;
-      t.metalness = source.metalness;
-      t.transmission = source.transmission || 0;
-      t.ior = source.ior || 1.5;
-      t.clearcoat = source.clearcoat || 0;
-      t.clearcoatRoughness = source.clearcoatRoughness || 0;
-      t.sheen = source.sheen || 0;
-      t.sheenTint = source.sheenTint || 0.5;
-      t.alpha = source.opacity;
-      t.map = source.map;
-      t.emissive.copy(source.emissive);
-      t.emissiveMap = source.emissiveMap;
-      t.normalMap = source.normalMap;
-      t.normalScale.copy(source.normalScale);
-      t.roughnessMap = source.roughnessMap;
-      t.metalnessMap = source.metalnessMap;
+      DisneyMaterial.name = source.name;
+      DisneyMaterial.color.copy(source.color);
+      DisneyMaterial.roughness = source.roughness;
+      DisneyMaterial.metalness = source.metalness;
+      DisneyMaterial.transmission = source.transmission || 0;
+      DisneyMaterial.ior = source.ior || 1.5;
+      DisneyMaterial.clearcoat = source.clearcoat || 0;
+      DisneyMaterial.clearcoatRoughness = source.clearcoatRoughness || 0;
+      DisneyMaterial.sheen = source.sheen || 0;
+      DisneyMaterial.sheenTint = source.sheenTint || 0.5;
+      DisneyMaterial.alpha = source.opacity;
+      DisneyMaterial.map = source.map;
+      DisneyMaterial.emissive.copy(source.emissive);
+      DisneyMaterial.emissiveMap = source.emissiveMap;
+      DisneyMaterial.normalMap = source.normalMap;
+      DisneyMaterial.normalScale.copy(source.normalScale);
+      DisneyMaterial.roughnessMap = source.roughnessMap;
+      DisneyMaterial.metalnessMap = source.metalnessMap;
 
       if (source.isGLTFSpecularGlossinessMaterial) {
-        t.workflow = "Specular";
-        t.specularColor.copy(source.specular);
-        t.glossiness = source.glossiness;
-        t.specularMap = source.specularMap;
-        t.glossinessMap = source.glossinessMap;
+        DisneyMaterial.workflow = "Specular";
+        DisneyMaterial.specularColor.copy(source.specular);
+        DisneyMaterial.glossiness = source.glossiness;
+        DisneyMaterial.specularMap = source.specularMap;
+        DisneyMaterial.glossinessMap = source.glossinessMap;
       }
 
-      return t;
+      return DisneyMaterial;
     }
   }
 
-  function M(e) {
-    const t = {};
-    return (
-      (t.position = e.map((e) => e.position)),
-      (t.emission = e.map((e) => e.emission)),
-      (t.p1 = e.map((e) => e.p1)),
-      (t.p2 = e.map((e) => e.p2)),
-      (t.radius = e.map((e) => e.radius)),
-      (t.area = e.map((e) => e.area)),
-      (t.type = e.map((e) => e.type)),
-      (t.visible = e.map((e) => e.visible)),
-      (t.position = [].concat(...t.position.map((e) => e.toArray()))),
-      (t.emission = [].concat(...t.emission.map((e) => e.toArray()))),
-      (t.p1 = [].concat(...t.p1.map((e) => e.toArray()))),
-      (t.p2 = [].concat(...t.p2.map((e) => e.toArray()))),
-      (t.params = (function (...e) {
-        let t = 0;
-        for (let n = 0; n < e.length; n++) {
-          const a = e[n],
-            i = a.data ? a.data.length / a.channels : 0;
-          t = Math.max(t, i);
+  //MaterialBuffer
+  function interleave(...arrays) {
+    let maxLength = 0;
+    for (let i = 0; i < arrays.length; i++) {
+      const a = arrays[i];
+      const l = a.data ? a.data.length / a.channels : 0;
+      maxLength = Math.max(maxLength, l);
+    }
+
+    const interleaved = [];
+
+    for (let i = 0; i < maxLength; i++) {
+      for (let j = 0; j < arrays.length; j++) {
+        const { data = [], channels } = arrays[j];
+
+        for (let c = 0; c < channels; c++) {
+          interleaved.push(data[i * channels + c]);
         }
-        const a = [];
-        for (let n = 0; n < t; n++)
-          for (let t = 0; t < e.length; t++) {
-            const { data: i = [], channels: o } = e[t];
-            for (let e = 0; e < o; e++) a.push(i[n * o + e]);
-          }
-        return a;
-      })(
-        { data: t.radius, channels: 1 },
-        { data: t.area, channels: 1 },
-        { data: t.type, channels: 1 },
-        { data: t.visible, channels: 1 }
-      )),
-      t
-    );
-  }
-  function F(e, a) {
-    const n = [],
-      i = [];
-    e.traverse((e) => {
-      e.isMesh &&
-        (e.geometry
-          ? e.material
-            ? (e.material.isMeshStandardMaterial
-                ? (e.material = new DisneyMaterial().fromStandardMaterial(
-                    e.material
-                  ))
-                : e.material.isRayTracingMaterial ||
-                  (e.material = new DisneyMaterial().fromBasicMaterial(
-                    e.material
-                  )),
-              n.push(e))
-            : console.warn(e, "must have a material property.")
-          : console.warn(e, "must have a geometry property")),
-        e.isLight && i.push(e);
-    });
-    const o = { data: e.environment, intensity: e.envMapIntensity || 1 },
-      r = o.data && o.data.isTexture,
-      s = i.length || 0;
-    let l = null;
-    return (
-      s &&
-        (l = (function (e) {
-          return M(
-            e.map((e) => {
-              const a = {};
-              switch (
-                ((a.position = e.position),
-                (a.emission = e.color.multiplyScalar(e.intensity)),
-                (a.radius = e.radius || 0),
-                (a.area = 0),
-                (a.visible = Number(e.visible)),
-                (a.p1 = new t.Vector3()),
-                (a.p2 = new t.Vector3()),
-                e.type)
-              ) {
-                case "RectAreaLight":
-                  if (((a.type = 0), e.width && e.height)) {
-                    const n = new t.PlaneGeometry(e.width, e.height),
-                      i = new t.Vector3();
-                    e.target && i.copy(e.target);
-                    const o = new t.Vector3().subVectors(e.position, i),
-                      r = new t.Vector3().copy(o).negate();
-                    n.lookAt(r);
-                    const s = n.attributes.position.array,
-                      l = new t.Vector3(s[0], s[1], s[2]).add(e.position);
-                    new t.Vector3(s[3], s[4], s[5]).add(e.position);
-                    const f = new t.Vector3(s[6], s[7], s[8]).add(e.position),
-                      d = new t.Vector3(s[9], s[10], s[11]).add(e.position);
-                    a.position.copy(f),
-                      (a.p1 = d.sub(f)),
-                      (a.p2 = l.sub(f)),
-                      (a.area = new t.Vector3()
-                        .crossVectors(a.p1, a.p2)
-                        .length());
-                  }
-                  break;
-                case "QuadLight":
-                  (a.type = 1),
-                    (a.p1 = e.v1.sub(e.position)),
-                    (a.p2 = e.v2.sub(e.position)),
-                    (a.area = new t.Vector3()
-                      .crossVectors(a.p1, a.p2)
-                      .length());
-                  break;
-                case "SphereAreaLight":
-                  (a.type = 2), (a.area = 4 * Math.PI * e.radius * e.radius);
-                  break;
-                case "PointLight":
-                  (a.type = 4), (a.area = 0);
-                  break;
-                case "DirectionalLight":
-                  (a.type = 3), e.target && a.p1.copy(e.target), (a.area = 0);
-                  break;
-                default:
-                  console.warn(`Not support light type: ${e.type}`);
-              }
-              return a;
-            })
-          );
-        })(i)),
-      {
-        environment: o,
-        isTextureEnv: r,
-        camera: a,
-        meshes: n,
-        meshLights: l,
-        meshLightsNum: s,
       }
-    );
+    }
+
+    return interleaved;
   }
+
+  function makeLightsBuffer(lights) {
+    const bufferData = {};
+
+    bufferData.position = lights.map((l) => l.position);
+    bufferData.emission = lights.map((l) => l.emission);
+    bufferData.p1 = lights.map((l) => l.p1);
+    bufferData.p2 = lights.map((l) => l.p2);
+    bufferData.radius = lights.map((l) => l.radius);
+    bufferData.area = lights.map((l) => l.area);
+    bufferData.type = lights.map((l) => l.type);
+    bufferData.visible = lights.map((l) => l.visible);
+    bufferData.position = [].concat(
+      ...bufferData.position.map((l) => l.toArray())
+    );
+    bufferData.emission = [].concat(
+      ...bufferData.emission.map((l) => l.toArray())
+    );
+    bufferData.p1 = [].concat(...bufferData.p1.map((l) => l.toArray()));
+    bufferData.p2 = [].concat(...bufferData.p2.map((l) => l.toArray()));
+    bufferData.params = interleave(
+      { data: bufferData.radius, channels: 1 },
+      { data: bufferData.area, channels: 1 },
+      { data: bufferData.type, channels: 1 },
+      { data: bufferData.visible, channels: 1 }
+    );
+    console.log(bufferData);
+    return bufferData;
+  }
+
+  function decomposeScene(scene, camera) {
+    const meshes = [];
+    const lights = [];
+
+    scene.traverse((child) => {
+      if (child.isMesh) {
+        if (!child.geometry) {
+          console.warn(child, "must have a geometry property.");
+        } else if (!child.material) {
+          console.warn(child, "must have a material property.");
+        } else {
+          if (child.material.isMeshStandardMaterial) {
+            child.material = new DisneyMaterial().fromStandardMaterial(
+              child.material
+            );
+          } else {
+            child.material.isRayTracingMaterial ||
+              (child.material = new DisneyMaterial().fromBasicMaterial(
+                child.material
+              ));
+          }
+          meshes.push(child);
+        }
+      } else if (child.isLight) {
+        lights.push(child);
+      }
+    });
+
+    const environment = {
+      data: scene.environment,
+      intensity: scene.envMapIntensity || 1,
+    };
+    const isTextureEnv = environment.data && environment.data.isTexture;
+    const meshLightsNum = lights.length || 0;
+
+    let meshLights = null;
+
+    if (meshLightsNum) {
+      meshLights = (function (e) {
+        return makeLightsBuffer(
+          e.map((light) => {
+            const a = {};
+            a.position = light.position;
+            a.emission = light.color.multiplyScalar(light.intensity);
+            a.radius = light.radius || 0;
+            a.area = 0;
+            a.visible = Number(light.visible);
+            a.p1 = new THREE.Vector3();
+            a.p2 = new THREE.Vector3();
+            switch (light.type) {
+              case "RectAreaLight":
+                a.type = 0;
+                if (light.width && light.height) {
+                  const planeGeometry = new THREE.PlaneGeometry(
+                    light.width,
+                    light.height
+                  );
+                  const target = new THREE.Vector3();
+                  light.target && target.copy(light.target);
+                  const position = new THREE.Vector3().subVectors(
+                    light.position,
+                    target
+                  );
+
+                  const direction = new THREE.Vector3().copy(position).negate();
+                  planeGeometry.lookAt(direction);
+
+                  const s = planeGeometry.attributes.position.array;
+                  const l = new THREE.Vector3(s[0], s[1], s[2]).add(
+                    light.position
+                  );
+
+                  new THREE.Vector3(s[3], s[4], s[5]).add(light.position);
+                  const f = new THREE.Vector3(s[6], s[7], s[8]).add(
+                    light.position
+                  );
+                  const d = new THREE.Vector3(s[9], s[10], s[11]).add(
+                    light.position
+                  );
+                  a.position.copy(f);
+                  a.p1 = d.sub(f);
+                  a.p2 = l.sub(f);
+                  a.area = new THREE.Vector3()
+                    .crossVectors(a.p1, a.p2)
+                    .length();
+                  console.log(a.area);
+                }
+
+                break;
+              case "QuadLight":
+                a.type = 1;
+                a.p1 = light.v1.sub(light.position);
+                a.p2 = light.v2.sub(light.position);
+                a.area = new THREE.Vector3().crossVectors(a.p1, a.p2).length();
+                break;
+              case "SphereAreaLight":
+                a.type = 2;
+                a.area = 4 * Math.PI * light.radius * light.radius;
+                break;
+              case "PointLight":
+                a.type = 4;
+                a.area = 0;
+                break;
+              case "DirectionalLight":
+                a.type = 3;
+                light.target && a.p1.copy(light.target);
+                a.area = 0;
+                break;
+              default:
+                console.warn(`Not support light type: ${light.type}`);
+            }
+            console.log(a);
+            return a;
+          })
+        );
+      })(lights);
+    }
+
+    return {
+      environment,
+      isTextureEnv,
+      camera,
+      meshes,
+      meshLights,
+      meshLightsNum,
+    };
+  }
+
   function I(e, a) {
     const n = new t.BufferGeometry();
     for (const t of a) {
@@ -2341,7 +2390,7 @@ var __defProp = Object.defineProperty,
       },
     };
   }
-  async function xe({
+  async function makeRenderingPipeline({
     gl: e,
     optionalExtensions: a,
     scene: i,
@@ -2397,7 +2446,7 @@ var __defProp = Object.defineProperty,
         };
       })(e),
       I = Le(e),
-      T = F(i, o),
+      T = decomposeScene(i, o),
       P = G(T.meshes),
       N = U(e, P.materials),
       y = (function (e) {
@@ -2783,11 +2832,11 @@ var __defProp = Object.defineProperty,
         Y.updateBounces(e);
       },
       updateEnvLight: function () {
-        const e = F(i, o);
+        const e = decomposeScene(i, o);
         Y.updateEnvLight(e);
       },
       updateMeshLight: function () {
-        const e = F(i, o);
+        const e = decomposeScene(i, o);
         Y.updateMeshLight(e);
       },
       setEnvMapIntensity: function (e) {
@@ -2937,7 +2986,7 @@ var __defProp = Object.defineProperty,
         } = this;
         (this._isBuilding = !0),
           e.updateMatrixWorld(),
-          (this.pipeline = await xe({
+          (this.pipeline = await makeRenderingPipeline({
             gl: a,
             optionalExtensions: n,
             scene: e,

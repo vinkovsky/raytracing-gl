@@ -827,33 +827,33 @@ var __defProp = Object.defineProperty,
     return interleaved;
   }
 
-  function makeLightsBuffer(lights) {
-    const bufferData = {};
+  function combineMeshLightData(lights) {
+    const meshLight = {};
 
-    bufferData.position = lights.map((l) => l.position);
-    bufferData.emission = lights.map((l) => l.emission);
-    bufferData.p1 = lights.map((l) => l.p1);
-    bufferData.p2 = lights.map((l) => l.p2);
-    bufferData.radius = lights.map((l) => l.radius);
-    bufferData.area = lights.map((l) => l.area);
-    bufferData.type = lights.map((l) => l.type);
-    bufferData.visible = lights.map((l) => l.visible);
-    bufferData.position = [].concat(
-      ...bufferData.position.map((l) => l.toArray())
+    meshLight.position = lights.map((l) => l.position);
+    meshLight.emission = lights.map((l) => l.emission);
+    meshLight.p1 = lights.map((l) => l.p1);
+    meshLight.p2 = lights.map((l) => l.p2);
+    meshLight.radius = lights.map((l) => l.radius);
+    meshLight.area = lights.map((l) => l.area);
+    meshLight.type = lights.map((l) => l.type);
+    meshLight.visible = lights.map((l) => l.visible);
+    meshLight.position = [].concat(
+      ...meshLight.position.map((l) => l.toArray())
     );
-    bufferData.emission = [].concat(
-      ...bufferData.emission.map((l) => l.toArray())
+    meshLight.emission = [].concat(
+      ...meshLight.emission.map((l) => l.toArray())
     );
-    bufferData.p1 = [].concat(...bufferData.p1.map((l) => l.toArray()));
-    bufferData.p2 = [].concat(...bufferData.p2.map((l) => l.toArray()));
-    bufferData.params = interleave(
-      { data: bufferData.radius, channels: 1 },
-      { data: bufferData.area, channels: 1 },
-      { data: bufferData.type, channels: 1 },
-      { data: bufferData.visible, channels: 1 }
+    meshLight.p1 = [].concat(...meshLight.p1.map((l) => l.toArray()));
+    meshLight.p2 = [].concat(...meshLight.p2.map((l) => l.toArray()));
+    meshLight.params = interleave(
+      { data: meshLight.radius, channels: 1 },
+      { data: meshLight.area, channels: 1 },
+      { data: meshLight.type, channels: 1 },
+      { data: meshLight.visible, channels: 1 }
     );
-    console.log(bufferData);
-    return bufferData;
+
+    return meshLight;
   }
 
   function decomposeScene(scene, camera) {
@@ -894,84 +894,117 @@ var __defProp = Object.defineProperty,
     let meshLights = null;
 
     if (meshLightsNum) {
-      meshLights = (function (e) {
-        return makeLightsBuffer(
-          e.map((light) => {
-            const a = {};
-            a.position = light.position;
-            a.emission = light.color.multiplyScalar(light.intensity);
-            a.radius = light.radius || 0;
-            a.area = 0;
-            a.visible = Number(light.visible);
-            a.p1 = new THREE.Vector3();
-            a.p2 = new THREE.Vector3();
-            switch (light.type) {
-              case "RectAreaLight":
-                a.type = 0;
-                if (light.width && light.height) {
-                  const planeGeometry = new THREE.PlaneGeometry(
-                    light.width,
-                    light.height
-                  );
-                  const target = new THREE.Vector3();
-                  light.target && target.copy(light.target);
-                  const position = new THREE.Vector3().subVectors(
-                    light.position,
-                    target
-                  );
+      // This function looks very cumbersome
 
-                  const direction = new THREE.Vector3().copy(position).negate();
-                  planeGeometry.lookAt(direction);
+      meshLights = combineMeshLightData(
+        lights.map((light) => {
+          const meshLight = {};
 
-                  const s = planeGeometry.attributes.position.array;
-                  const l = new THREE.Vector3(s[0], s[1], s[2]).add(
-                    light.position
-                  );
+          meshLight.position = light.position;
+          meshLight.emission = light.color.multiplyScalar(light.intensity);
+          meshLight.radius = light.radius || 0;
+          meshLight.area = 0;
+          meshLight.visible = Number(light.visible);
+          meshLight.p1 = new THREE.Vector3();
+          meshLight.p2 = new THREE.Vector3();
 
-                  new THREE.Vector3(s[3], s[4], s[5]).add(light.position);
-                  const f = new THREE.Vector3(s[6], s[7], s[8]).add(
-                    light.position
-                  );
-                  const d = new THREE.Vector3(s[9], s[10], s[11]).add(
-                    light.position
-                  );
-                  a.position.copy(f);
-                  a.p1 = d.sub(f);
-                  a.p2 = l.sub(f);
-                  a.area = new THREE.Vector3()
-                    .crossVectors(a.p1, a.p2)
-                    .length();
-                  console.log(a.area);
+          switch (light.type) {
+            case "RectAreaLight":
+              meshLight.type = 0;
+              if (light.width && light.height) {
+                const planeGeometry = new THREE.PlaneGeometry(
+                  light.width,
+                  light.height
+                );
+
+                const targetPosition = new THREE.Vector3();
+
+                if (light.target) {
+                  targetPosition.copy(light.target);
                 }
 
-                break;
-              case "QuadLight":
-                a.type = 1;
-                a.p1 = light.v1.sub(light.position);
-                a.p2 = light.v2.sub(light.position);
-                a.area = new THREE.Vector3().crossVectors(a.p1, a.p2).length();
-                break;
-              case "SphereAreaLight":
-                a.type = 2;
-                a.area = 4 * Math.PI * light.radius * light.radius;
-                break;
-              case "PointLight":
-                a.type = 4;
-                a.area = 0;
-                break;
-              case "DirectionalLight":
-                a.type = 3;
-                light.target && a.p1.copy(light.target);
-                a.area = 0;
-                break;
-              default:
-                console.warn(`Not support light type: ${light.type}`);
-            }
-            console.log(a);
-            return a;
-          })
-        );
-      })(lights);
+                const planeGeometryPosition = new THREE.Vector3().subVectors(
+                  light.position,
+                  targetPosition
+                );
+
+                const lookAtPosition = new THREE.Vector3()
+                  .copy(planeGeometryPosition)
+                  .negate();
+
+                planeGeometry.lookAt(lookAtPosition);
+
+                const positionAttributes =
+                  planeGeometry.attributes.position.array;
+
+                const v1 = new THREE.Vector3(
+                  positionAttributes[0],
+                  positionAttributes[1],
+                  positionAttributes[2]
+                ).add(light.position);
+
+                // Unused v2 vertex
+
+                // const v2 = new THREE.Vector3(
+                //   positionAttributes[3],
+                //   positionAttributes[4],
+                //   positionAttributes[5]
+                // ).add(light.position);
+
+                const v3 = new THREE.Vector3(
+                  positionAttributes[6],
+                  positionAttributes[7],
+                  positionAttributes[8]
+                ).add(light.position);
+
+                const v4 = new THREE.Vector3(
+                  positionAttributes[9],
+                  positionAttributes[10],
+                  positionAttributes[11]
+                ).add(light.position);
+
+                meshLight.position.copy(v3);
+
+                meshLight.p1 = v4.sub(v3);
+                meshLight.p2 = v1.sub(v3);
+                meshLight.area = new THREE.Vector3()
+                  .crossVectors(meshLight.p1, meshLight.p2)
+                  .length();
+              }
+              break;
+            // Works like RectAreaLight without target but
+            // i have no idea wtf this is for
+
+            // case "QuadLight":
+            //   meshLight.type = 1;
+            //   meshLight.p1 = light.v1.sub(light.position);
+            //   meshLight.p2 = light.v2.sub(light.position);
+            //   meshLight.area = new THREE.Vector3()
+            //     .crossVectors(meshLight.p1, meshLight.p2)
+            //     .length();
+            //   break;
+            case "SphereAreaLight":
+              meshLight.type = 2;
+              meshLight.area = 4 * Math.PI * light.radius ** 2;
+              break;
+            case "PointLight":
+              meshLight.type = 4;
+              meshLight.area = 0;
+              break;
+            case "DirectionalLight":
+              meshLight.type = 3;
+              if (light.target) {
+                meshLight.p1.copy(light.target);
+              }
+              meshLight.area = 0;
+              break;
+            default:
+              console.warn(`Unsupported lighting type: ${light.type}.`);
+          }
+
+          return meshLight;
+        })
+      );
     }
 
     return {
@@ -984,26 +1017,53 @@ var __defProp = Object.defineProperty,
     };
   }
 
-  function I(e, a) {
-    const n = new t.BufferGeometry();
-    for (const t of a) {
-      const a = e.getAttribute(t);
-      a &&
-        ("function" != typeof n.setAttribute &&
-          (n.setAttribute = n.addAttribute),
-        n.setAttribute(t, a.clone()));
+  // Similar to buffergeometry.clone(), except we only copy
+  // specific attributes instead of everything
+
+  function cloneBufferGeometry(bufferGeometry, attributes) {
+    const newGeometry = new THREE.BufferGeometry();
+
+    for (const name of attributes) {
+      const attrib = bufferGeometry.getAttribute(name);
+      if (attrib) {
+        //.addAttribute() has been renamed to .setAttribute()
+
+        // if (typeof newGeometry.setAttribute !== "function") {
+        //   newGeometry.setAttribute = newGeometry.addAttribute;
+        // }
+        // newGeometry.addAttribute(name, attrib.clone());
+        newGeometry.setAttribute(name, attrib.clone());
+      }
     }
-    const i = e.getIndex();
-    return i && n.setIndex(i), n;
+
+    const index = bufferGeometry.getIndex();
+
+    if (index) {
+      newGeometry.setIndex(index);
+    }
+
+    return newGeometry;
   }
-  function T(e) {
-    const a = e.getAttribute("position");
-    if (!a) return void console.warn("No position attribute");
-    const n = new Uint32Array(a.count);
-    for (let t = 0; t < n.length; t++) n[t] = t;
-    return e.setIndex(new t.BufferAttribute(n, 1, !1)), e;
+
+  function addFlatGeometryIndices(geometry) {
+    const position = geometry.getAttribute("position");
+
+    if (!position) {
+      return void console.warn("No position attribute");
+    }
+
+    const index = new Uint32Array(position.count);
+
+    for (let i = 0; i < index.length; i++) {
+      index[i] = i;
+    }
+
+    geometry.setIndex(new THREE.BufferAttribute(index, 1, false));
+
+    return geometry;
   }
-  function G(e) {
+
+  function mergeMeshesToGeometry(e) {
     let a = 0,
       n = 0;
     const i = [],
@@ -1011,9 +1071,9 @@ var __defProp = Object.defineProperty,
     for (const s of e) {
       if (!s.visible) continue;
       const e = s.geometry.isBufferGeometry
-        ? I(s.geometry, ["position", "normal", "uv"])
+        ? cloneBufferGeometry(s.geometry, ["position", "normal", "uv"])
         : new t.BufferGeometry().fromGeometry(s.geometry);
-      e.getIndex() || T(e),
+      e.getIndex() || addFlatGeometryIndices(e),
         e.applyMatrix4
           ? e.applyMatrix4(s.matrixWorld)
           : e.applyMatrix(s.matrixWorld),
@@ -2447,7 +2507,7 @@ var __defProp = Object.defineProperty,
       })(e),
       I = Le(e),
       T = decomposeScene(i, o),
-      P = G(T.meshes),
+      P = mergeMeshesToGeometry(T.meshes),
       N = U(e, P.materials),
       y = (function (e) {
         const t = e.createVertexArray();

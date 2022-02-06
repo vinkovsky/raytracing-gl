@@ -74,6 +74,28 @@ var __defProp = Object.defineProperty,
   }
   var n = a(t);
 
+  const fnNameMatcher = /([^(]+)@|at ([^(]+) \(/;
+
+  function fnName(str) {
+    const regexResult = fnNameMatcher.exec(str);
+    return regexResult[1] || regexResult[2];
+  }
+
+  function log(...messages) {
+    const logLines = new Error().stack.split("\n");
+    const callerName = fnName(logLines[1]);
+
+    if (callerName !== null) {
+      if (callerName !== "log") {
+        console.log(callerName, "called log with:", ...messages);
+      } else {
+        console.log(fnName(logLines[2]), "called log with:", ...messages);
+      }
+    } else {
+      console.log(...messages);
+    }
+  }
+
   //fullscreenQuad.vert
   var fullscreenQuad = {
     source: `
@@ -827,33 +849,29 @@ var __defProp = Object.defineProperty,
     return interleaved;
   }
 
-  function combineMeshLightData(lights) {
-    const meshLight = {};
+  function mergeLightsFromScene(lights) {
+    const light = {};
 
-    meshLight.position = lights.map((l) => l.position);
-    meshLight.emission = lights.map((l) => l.emission);
-    meshLight.p1 = lights.map((l) => l.p1);
-    meshLight.p2 = lights.map((l) => l.p2);
-    meshLight.radius = lights.map((l) => l.radius);
-    meshLight.area = lights.map((l) => l.area);
-    meshLight.type = lights.map((l) => l.type);
-    meshLight.visible = lights.map((l) => l.visible);
-    meshLight.position = [].concat(
-      ...meshLight.position.map((l) => l.toArray())
-    );
-    meshLight.emission = [].concat(
-      ...meshLight.emission.map((l) => l.toArray())
-    );
-    meshLight.p1 = [].concat(...meshLight.p1.map((l) => l.toArray()));
-    meshLight.p2 = [].concat(...meshLight.p2.map((l) => l.toArray()));
-    meshLight.params = interleave(
-      { data: meshLight.radius, channels: 1 },
-      { data: meshLight.area, channels: 1 },
-      { data: meshLight.type, channels: 1 },
-      { data: meshLight.visible, channels: 1 }
+    light.position = lights.map((l) => l.position);
+    light.emission = lights.map((l) => l.emission);
+    light.p1 = lights.map((l) => l.p1);
+    light.p2 = lights.map((l) => l.p2);
+    light.radius = lights.map((l) => l.radius);
+    light.area = lights.map((l) => l.area);
+    light.type = lights.map((l) => l.type);
+    light.visible = lights.map((l) => l.visible);
+    light.position = [].concat(...light.position.map((l) => l.toArray()));
+    light.emission = [].concat(...light.emission.map((l) => l.toArray()));
+    light.p1 = [].concat(...light.p1.map((l) => l.toArray()));
+    light.p2 = [].concat(...light.p2.map((l) => l.toArray()));
+    light.params = interleave(
+      { data: light.radius, channels: 1 },
+      { data: light.area, channels: 1 },
+      { data: light.type, channels: 1 },
+      { data: light.visible, channels: 1 }
     );
 
-    return meshLight;
+    return light;
   }
 
   function decomposeScene(scene, camera) {
@@ -896,7 +914,7 @@ var __defProp = Object.defineProperty,
     if (meshLightsNum) {
       // This function looks very cumbersome
 
-      meshLights = combineMeshLightData(
+      meshLights = mergeLightsFromScene(
         lights.map((light) => {
           const meshLight = {};
 
@@ -911,6 +929,7 @@ var __defProp = Object.defineProperty,
           switch (light.type) {
             case "RectAreaLight":
               meshLight.type = 0;
+
               if (light.width && light.height) {
                 const planeGeometry = new THREE.PlaneGeometry(
                   light.width,
@@ -1017,6 +1036,8 @@ var __defProp = Object.defineProperty,
     };
   }
 
+  // mergeMeshesToGeometry
+
   // Similar to buffergeometry.clone(), except we only copy
   // specific attributes instead of everything
 
@@ -1025,13 +1046,14 @@ var __defProp = Object.defineProperty,
 
     for (const name of attributes) {
       const attrib = bufferGeometry.getAttribute(name);
+
       if (attrib) {
         //.addAttribute() has been renamed to .setAttribute()
 
-        // if (typeof newGeometry.setAttribute !== "function") {
-        //   newGeometry.setAttribute = newGeometry.addAttribute;
-        // }
-        // newGeometry.addAttribute(name, attrib.clone());
+        if (typeof newGeometry.setAttribute !== "function") {
+          newGeometry.setAttribute = newGeometry.addAttribute;
+        }
+
         newGeometry.setAttribute(name, attrib.clone());
       }
     }
@@ -1063,633 +1085,941 @@ var __defProp = Object.defineProperty,
     return geometry;
   }
 
-  function mergeMeshesToGeometry(e) {
-    let a = 0,
-      n = 0;
-    const i = [],
-      o = new Map();
-    for (const s of e) {
-      if (!s.visible) continue;
-      const e = s.geometry.isBufferGeometry
-        ? cloneBufferGeometry(s.geometry, ["position", "normal", "uv"])
-        : new t.BufferGeometry().fromGeometry(s.geometry);
-      e.getIndex() || addFlatGeometryIndices(e),
-        e.applyMatrix4
-          ? e.applyMatrix4(s.matrixWorld)
-          : e.applyMatrix(s.matrixWorld),
-        e.getAttribute("normal")
-          ? e.normalizeNormals()
-          : e.computeVertexNormals(),
-        (a += e.getAttribute("position").count),
-        (n += e.getIndex().count);
-      const r = s.material;
-      let l = o.get(r);
-      void 0 === l && ((l = o.size), o.set(r, l)),
-        i.push({ geometry: e, materialIndex: l });
-    }
-    let r = (function (e, a, n) {
-      const i = new t.BufferAttribute(new Float32Array(3 * a), 3, !1),
-        o = new t.BufferAttribute(new Float32Array(3 * a), 3, !1),
-        r = new t.BufferAttribute(new Float32Array(2 * a), 2, !1),
-        s = new t.BufferAttribute(new Int32Array(2 * a), 2, !1),
-        l = new t.BufferAttribute(new Uint32Array(n), 1, !1),
-        f = new t.BufferGeometry();
-      "function" != typeof f.setAttribute && (f.setAttribute = f.addAttribute),
-        f.setAttribute("position", i),
-        f.setAttribute("normal", o),
-        f.setAttribute("uv", r),
-        f.setAttribute("materialMeshIndex", s),
-        f.setIndex(l);
-      let d = 0,
-        c = 0,
-        u = 1;
-      for (const { geometry: t, materialIndex: p } of e) {
-        const e = t.getAttribute("position").count;
-        f.merge(t, d);
-        const a = t.getIndex();
-        for (let t = 0; t < a.count; t++) l.setX(c + t, d + a.getX(t));
-        for (let t = 0; t < e; t++) s.setXY(d + t, p, u);
-        (d += e), (c += a.count), u++;
+  function mergeMeshesToGeometry(meshes) {
+    let vertexCount = 0;
+    let indexCount = 0;
+
+    const geometryAndMaterialIndex = [];
+    const materialIndexMap = new Map();
+
+    for (const mesh of meshes) {
+      if (!mesh.visible) {
+        continue;
       }
-      return f;
-    })(i, a, n);
-    return { geometry: r, materials: Array.from(o.keys()) };
+
+      const geometry = mesh.geometry.isBufferGeometry
+        ? cloneBufferGeometry(mesh.geometry, ["position", "normal", "uv"]) // BufferGeometry object
+        : new THREE.BufferGeometry().fromGeometry(mesh.geometry); // Geometry object
+
+      const index = geometry.getIndex();
+
+      if (!index) {
+        addFlatGeometryIndices(geometry);
+      }
+
+      if (geometry.applyMatrix4) {
+        geometry.applyMatrix4(mesh.matrixWorld);
+      } else {
+        geometry.applyMatrix(mesh.matrixWorld);
+      }
+
+      if (geometry.getAttribute("normal")) {
+        geometry.normalizeNormals();
+      } else {
+        geometry.computeVertexNormals();
+      }
+
+      vertexCount += geometry.getAttribute("position").count;
+      indexCount += geometry.getIndex().count;
+
+      const material = mesh.material;
+
+      let materialIndex = materialIndexMap.get(material);
+
+      if (materialIndex === undefined) {
+        materialIndex = materialIndexMap.size;
+        materialIndexMap.set(material, materialIndex);
+      }
+
+      geometryAndMaterialIndex.push({ geometry, materialIndex });
+    }
+
+    const geometry = mergeGeometry(
+      geometryAndMaterialIndex,
+      vertexCount,
+      indexCount
+    );
+
+    const materials = Array.from(materialIndexMap.keys());
+
+    return { geometry, materials };
   }
-  function P(e, t, a, n, i, o, r) {
-    const s = Math.min(r.length / o, a);
-    for (let l = 0; l < s; l++)
-      for (let a = 0; a < o; a++) e[t](n + l * i + 4 * a, r[o * l + a], !0);
+
+  function mergeGeometry(geometryAndMaterialIndex, vertexCount, indexCount) {
+    const positionAttrib = new THREE.BufferAttribute(
+      new Float32Array(3 * vertexCount),
+      3,
+      false
+    );
+    const normalAttrib = new THREE.BufferAttribute(
+      new Float32Array(3 * vertexCount),
+      3,
+      false
+    );
+    const uvAttrib = new THREE.BufferAttribute(
+      new Float32Array(2 * vertexCount),
+      2,
+      false
+    );
+    const materialMeshIndexAttrib = new THREE.BufferAttribute(
+      new Int32Array(2 * vertexCount),
+      2,
+      false
+    );
+    const indexAttrib = new THREE.BufferAttribute(
+      new Uint32Array(indexCount),
+      1,
+      false
+    );
+    const mergedGeometry = new THREE.BufferGeometry();
+
+    if (typeof mergedGeometry.setAttribute !== "function") {
+      mergedGeometry.setAttribute = mergedGeometry.addAttribute;
+    }
+
+    mergedGeometry.setAttribute("position", positionAttrib);
+    mergedGeometry.setAttribute("normal", normalAttrib);
+    mergedGeometry.setAttribute("uv", uvAttrib);
+    mergedGeometry.setAttribute("materialMeshIndex", materialMeshIndexAttrib);
+    mergedGeometry.setIndex(indexAttrib);
+
+    let currentVertex = 0;
+    let currentIndex = 0;
+    let currentMesh = 1;
+
+    for (const { geometry, materialIndex } of geometryAndMaterialIndex) {
+      const vertexCount = geometry.getAttribute("position").count;
+      mergedGeometry.merge(geometry, currentVertex);
+
+      const a = geometry.getIndex();
+
+      for (let i = 0; i < a.count; i++) {
+        indexAttrib.setX(currentIndex + i, currentVertex + a.getX(i));
+      }
+
+      for (let i = 0; i < vertexCount; i++) {
+        materialMeshIndexAttrib.setXY(
+          currentVertex + i,
+          materialIndex,
+          currentMesh
+        );
+      }
+
+      currentVertex += vertexCount;
+      currentIndex += a.count;
+      currentMesh++;
+    }
+    return mergedGeometry;
   }
-  function N(e, t) {
-    const a = { textures: [], indices: {} };
-    for (const n of t) a.indices[n] = y(e, n, a.textures);
-    return a;
+
+  // UniformBuffer
+  function setData(dataView, setter, size, offset, stride, components, value) {
+    const l = Math.min(value.length / components, size);
+    for (let i = 0; i < l; i++)
+      for (let k = 0; k < components; k++)
+        dataView[setter](
+          offset + i * stride + 4 * k,
+          value[components * i + k],
+          true
+        );
   }
-  function y(e, t, a) {
-    const n = [];
-    for (const i of e) {
-      if (i[t] && i[t].image) {
-        let e = a.length;
-        for (let n = 0; n < a.length; n++)
-          if (a[n] === i[t]) {
-            e = n;
+
+  // texturesFromMaterials
+
+  // retrieve textures used by meshes, grouping textures from meshes shared *across all* mesh properties
+
+  function mergeTexturesFromMaterials(materials, textureNames) {
+    const textureMap = { textures: [], indices: {} };
+
+    for (const name of textureNames) {
+      textureMap.indices[name] = texturesFromMaterials(
+        materials,
+        name,
+        textureMap.textures
+      );
+    }
+
+    return textureMap;
+  }
+
+  function texturesFromMaterials(materials, textureName, textures) {
+    const indices = [];
+
+    for (const material of materials) {
+      const isTextureLoaded =
+        material[textureName] && material[textureName].image;
+      if (isTextureLoaded) {
+        let index = textures.length;
+
+        for (let i = 0; i < textures.length; i++) {
+          if (textures[i] === material[textureName]) {
+            // Reuse existing duplicate texture.
+            index = i;
             break;
           }
-        e === a.length && a.push(i[t]), n.push(e);
-      } else n.push(-1);
-    }
-    return n;
-  }
-  function b(...e) {
-    let t = 0;
-    for (let n = 0; n < e.length; n++) {
-      const a = e[n],
-        i = a.data ? a.data.length / a.channels : 0;
-      t = Math.max(t, i);
-    }
-    const a = [];
-    for (let n = 0; n < t; n++)
-      for (let t = 0; t < e.length; t++) {
-        const { data: i = [], channels: o } = e[t];
-        for (let e = 0; e < o; e++) a.push(i[n * o + e]);
-      }
-    return a;
-  }
-  function R(e, t, a) {
-    const n = (function (e, t, a) {
-      const n = e.getUniformBlockIndex(t, a),
-        i = e.getActiveUniformBlockParameter(t, n, e.UNIFORM_BLOCK_DATA_SIZE),
-        o = (function (e, t, a) {
-          const n = e.getActiveUniformBlockParameter(
-              t,
-              a,
-              e.UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES
-            ),
-            i = e.getActiveUniforms(t, n, e.UNIFORM_OFFSET),
-            o = e.getActiveUniforms(t, n, e.UNIFORM_ARRAY_STRIDE),
-            r = {};
-          for (let s = 0; s < n.length; s++) {
-            const { name: a, type: l, size: f } = e.getActiveUniform(t, n[s]);
-            r[a] = { type: l, size: f, offset: i[s], stride: o[s] };
-          }
-          return r;
-        })(e, t, n),
-        r = e.createBuffer();
-      e.bindBuffer(e.UNIFORM_BUFFER, r),
-        e.bufferData(e.UNIFORM_BUFFER, i, e.STATIC_DRAW);
-      const s = new DataView(new ArrayBuffer(i));
-      return {
-        set: function (t, a) {
-          if (!o[t]) return;
-          const { type: n, size: i, offset: r, stride: l } = o[t];
-          switch (n) {
-            case e.FLOAT:
-              P(s, "setFloat32", i, r, l, 1, a);
-              break;
-            case e.FLOAT_VEC2:
-              P(s, "setFloat32", i, r, l, 2, a);
-              break;
-            case e.FLOAT_VEC3:
-              P(s, "setFloat32", i, r, l, 3, a);
-              break;
-            case e.FLOAT_VEC4:
-              P(s, "setFloat32", i, r, l, 4, a);
-              break;
-            case e.INT:
-              P(s, "setInt32", i, r, l, 1, a);
-              break;
-            case e.INT_VEC2:
-              P(s, "setInt32", i, r, l, 2, a);
-              break;
-            case e.INT_VEC3:
-              P(s, "setInt32", i, r, l, 3, a);
-              break;
-            case e.INT_VEC4:
-              P(s, "setInt32", i, r, l, 4, a);
-              break;
-            case e.BOOL:
-              P(s, "setUint32", i, r, l, 1, a);
-              break;
-            default:
-              console.warn("UniformBuffer: Unsupported type");
-          }
-        },
-        bind: function (t) {
-          e.bindBuffer(e.UNIFORM_BUFFER, r),
-            e.bufferSubData(e.UNIFORM_BUFFER, 0, s),
-            e.bindBufferBase(e.UNIFORM_BUFFER, t, r);
-        },
-      };
-    })(e, t, "Materials");
-    n.set(
-      "Materials.colorAndMaterialType[0]",
-      b(
-        { data: [].concat(...a.color.map((e) => e.toArray())), channels: 3 },
-        { data: a.type, channels: 1 }
-      )
-    ),
-      n.set(
-        "Materials.roughnessMetalnessNormalScale[0]",
-        b(
-          { data: a.roughness, channels: 1 },
-          { data: a.metalness, channels: 1 },
-          {
-            data: [].concat(...a.normalScale.map((e) => e.toArray())),
-            channels: 2,
-          }
-        )
-      ),
-      n.set(
-        "Materials.alphaSpecularTintSheenSheenTint[0]",
-        b(
-          { data: a.alpha, channels: 1 },
-          { data: a.specularTint, channels: 1 },
-          { data: a.sheen, channels: 1 },
-          { data: a.sheenTint, channels: 1 }
-        )
-      ),
-      n.set(
-        "Materials.clearcoaRoughnessSubfaceTransmission[0]",
-        b(
-          { data: a.clearcoat, channels: 1 },
-          { data: a.clearcoatRoughness, channels: 1 },
-          { data: a.subsurface, channels: 1 },
-          { data: a.transmission, channels: 1 }
-        )
-      ),
-      n.set(
-        "Materials.iorAtDistanceAnisotropicWorkflow[0]",
-        b(
-          { data: a.ior, channels: 1 },
-          { data: a.atDistance, channels: 1 },
-          { data: a.anisotropic, channels: 1 },
-          { data: a.workflow, channels: 1 }
-        )
-      ),
-      n.set(
-        "Materials.specularColorGlossiness[0]",
-        b(
-          {
-            data: [].concat(...a.specularColor.map((e) => e.toArray())),
-            channels: 3,
-          },
-          { data: a.glossiness, channels: 1 }
-        )
-      ),
-      n.set(
-        "Materials.extinction[0]",
-        b(
-          {
-            data: [].concat(...a.extinction.map((e) => e.toArray())),
-            channels: 3,
-          },
-          { data: a.anisotropic, channels: 1 }
-        )
-      ),
-      n.set(
-        "Materials.diffuseNormalRoughnessMetalnessMapIndex[0]",
-        b(
-          { data: a.diffuseMapIndex, channels: 1 },
-          { data: a.normalMapIndex, channels: 1 },
-          { data: a.roughnessMapIndex, channels: 1 },
-          { data: a.metalnessMapIndex, channels: 1 }
-        )
-      ),
-      n.set(
-        "Materials.emissiveSpecularGlossinessMapIndex[0]",
-        b(
-          { data: a.emissiveMapIndex, channels: 1 },
-          { data: a.specularMapIndex, channels: 1 },
-          { data: a.glossinessMapIndex, channels: 1 },
-          { data: a.emissiveMapIndex, channels: 1 }
-        )
-      ),
-      n.set(
-        "Materials.diffuseNormalMapSize[0]",
-        b(
-          { data: a.diffuseMapSize, channels: 2 },
-          { data: a.normalMapSize, channels: 2 }
-        )
-      ),
-      n.set("Materials.pbrMapSize[0]", a.pbrMapSize),
-      n.bind(0);
-  }
-  function E(e, t, a = !1, n = 3) {
-    const i = t.map((e) => e.image),
-      o = t.map((e) => e.flipY),
-      { maxSize: r, relativeSizes: s } = (function (e) {
-        const t = { width: 0, height: 0 };
-        for (const n of e)
-          (t.width = Math.max(t.width, n.width)),
-            (t.height = Math.max(t.height, n.height));
-        const a = [];
-        for (const n of e)
-          a.push(n.width / t.width), a.push(n.height / t.height);
-        return { maxSize: t, relativeSizes: a };
-      })(i);
-    return {
-      texture: makeTexture(e, {
-        width: r.width,
-        height: r.height,
-        gammaCorrection: a,
-        data: i,
-        flipY: o,
-        channels: n,
-        minFilter: e.LINEAR,
-        magFilter: e.LINEAR,
-      }),
-      relativeSizes: s,
-    };
-  }
-  function U(e, t) {
-    const a = (function (e, t) {
-        const a = {};
-        for (const n of t) {
-          const t = [];
-          a[n] = { indices: y(e, n, t), textures: t };
         }
-        return a;
-      })(t, ["map", "normalMap", "emissiveMap"]),
-      n = N(t, ["roughnessMap", "metalnessMap"]),
-      i = N(t, ["specularMap", "glossinessMap"]),
-      o = {},
-      r = {};
-    if (
-      ((r.color = t.map((e) => e.color)),
-      (r.roughness = t.map((e) => e.roughness)),
-      (r.metalness = t.map((e) => e.metalness)),
-      (r.normalScale = t.map((e) => e.normalScale)),
-      (r.specularTint = t.map((e) => e.specularTint)),
-      (r.sheen = t.map((e) => e.sheen)),
-      (r.sheenTint = t.map((e) => e.sheenTint)),
-      (r.clearcoat = t.map((e) => e.clearcoat)),
-      (r.clearcoatRoughness = t.map((e) => e.clearcoatRoughness)),
-      (r.transmission = t.map((e) => e.transmission)),
-      (r.subsurface = t.map((e) => e.subsurface)),
-      (r.ior = t.map((e) => e.ior)),
-      (r.atDistance = t.map((e) => e.atDistance)),
-      (r.extinction = t.map((e) => e.extinction)),
-      (r.alpha = t.map((e) => e.alpha)),
-      (r.workflow = t.map((e) => ("Metalness" === e.workflow ? 0 : 1))),
-      (r.specularColor = t.map((e) => e.specularColor)),
-      (r.glossiness = t.map((e) => e.glossiness)),
-      (r.type = t.map((e) => 0)),
-      a.map.textures.length > 0)
-    ) {
-      const { relativeSizes: t, texture: n } = E(e, a.map.textures, !0, 4);
-      (o.diffuseMap = n),
-        (r.diffuseMapSize = t),
-        (r.diffuseMapIndex = a.map.indices);
+
+        if (index === textures.length) {
+          // New texture. Add texture to list.
+          textures.push(material[textureName]);
+        }
+
+        indices.push(index);
+      } else {
+        indices.push(-1);
+      }
     }
-    if (a.normalMap.textures.length > 0) {
-      const { relativeSizes: t, texture: n } = E(e, a.normalMap.textures, !1);
-      (o.normalMap = n),
-        (r.normalMapSize = t),
-        (r.normalMapIndex = a.normalMap.indices);
-    }
-    if (n.textures.length > 0) {
-      const { relativeSizes: t, texture: a } = E(e, n.textures, !1);
-      (o.pbrMap = a),
-        (r.pbrMapSize = t),
-        (r.roughnessMapIndex = n.indices.roughnessMap),
-        (r.metalnessMapIndex = n.indices.metalnessMap);
-    }
-    if (i.textures.length > 0) {
-      const { relativeSizes: t, texture: a } = E(e, i.textures, !1, 4);
-      (o.pbrSGMap = a),
-        (r.pbrMapSize = t),
-        (r.specularMapIndex = i.indices.specularMap),
-        (r.glossinessMapIndex = i.indices.glossinessMap);
-    }
-    if (a.emissiveMap.textures.length > 0) {
-      const { relativeSizes: t, texture: n } = E(e, a.emissiveMap.textures, !0);
-      (o.emissiveMap = n),
-        r.pbrMapSize || (r.pbrMapSize = t),
-        (r.emissiveMapIndex = a.emissiveMap.indices);
-    }
-    const s = {
-      NUM_MATERIALS: t.length,
-      NUM_DIFFUSE_MAPS: a.map.textures.length,
-      NUM_NORMAL_MAPS: a.normalMap.textures.length,
-      NUM_DIFFUSE_NORMAL_MAPS: Math.max(
-        a.map.textures.length,
-        a.normalMap.textures.length
-      ),
-      NUM_PBR_MAPS: n.textures.length,
-      NUM_PBR_SG_MAPS: i.textures.length,
-      NUM_EMISSIVE_MAPS: a.emissiveMap.textures.length,
-    };
-    return (
-      R(
-        e,
-        makeRenderPass(e, {
-          vertex: { source: "void main() {}" },
-          fragment: {
-            includes: [
-              "uniform Materials {\n\tvec4 colorAndMaterialType[NUM_MATERIALS];\n\tvec4 roughnessMetalnessNormalScale[NUM_MATERIALS];\n\tvec4 alphaSpecularTintSheenSheenTint[NUM_MATERIALS];\n\tvec4 clearcoaRoughnessSubfaceTransmission[NUM_MATERIALS];\n\tvec4 iorAtDistanceAnisotropicWorkflow[NUM_MATERIALS];\n\tvec4 extinction[NUM_MATERIALS];\n\tvec4 specularColorGlossiness[NUM_MATERIALS];\n\n\t#if defined(NUM_DIFFUSE_MAPS) || defined(NUM_NORMAL_MAPS) || defined(NUM_PBR_MAPS)\n\t\tivec4 diffuseNormalRoughnessMetalnessMapIndex[NUM_MATERIALS];\n\t#endif\n\n\t#if defined(NUM_EMISSIVE_MAPS) || defined(NUM_PBR_SG_MAPS)\n\t\tivec4 emissiveSpecularGlossinessMapIndex[NUM_MATERIALS];\n\t#endif\n\n\t#if defined(NUM_DIFFUSE_MAPS) || defined(NUM_NORMAL_MAPS)\n\t\tvec4 diffuseNormalMapSize[NUM_DIFFUSE_NORMAL_MAPS];\n\t#endif\n\n\t#if defined(NUM_PBR_MAPS)\n\t\tvec2 pbrMapSize[NUM_PBR_MAPS];\n\t#else\n\t\t#if defined(NUM_PBR_SG_MAPS)\n\t\t\tvec2 pbrMapSize[NUM_PBR_SG_MAPS];\n\t\t#else\n\t\t\t#if defined(NUM_EMISSIVE_MAPS)\n\t\t\t\tvec2 pbrMapSize[NUM_EMISSIVE_MAPS];\n\t\t\t#endif\n\t\t#endif\n\t#endif\n} materials;\n\n#ifdef NUM_DIFFUSE_MAPS\n\tuniform mediump sampler2DArray diffuseMap;\n#endif\n\n#ifdef NUM_NORMAL_MAPS\n\tuniform mediump sampler2DArray normalMap;\n#endif\n\n#ifdef NUM_PBR_MAPS\n\tuniform mediump sampler2DArray pbrMap;\n#endif\n\n#ifdef NUM_PBR_SG_MAPS\n\tuniform mediump sampler2DArray pbrSGMap;\n#endif\n\n#ifdef NUM_EMISSIVE_MAPS\n\tuniform mediump sampler2DArray emissiveMap;\n#endif\n\nfloat getMatType(int materialIndex) {\n\treturn materials.colorAndMaterialType[materialIndex].w;\n}\n\nfloat getMatWorkflow(int materialIndex) {\n\treturn materials.iorAtDistanceAnisotropicWorkflow[materialIndex].w;\n}\n\nvec3 getMatEmissive(int materialIndex, vec2 uv) {\n\t// Todo: emissive Intensity\n\tvec3 emissive = vec3(0.0);\n\n\t#ifdef NUM_EMISSIVE_MAPS\n\t\tint emissiveMapIndex = materials.emissiveSpecularGlossinessMapIndex[materialIndex].x;\n\t\tif (emissiveMapIndex >= 0) {\n\t\t\temissive = texture(emissiveMap, vec3(uv * materials.pbrMapSize[emissiveMapIndex].xy, emissiveMapIndex)).rgb;\n\t\t}\n\t#endif\n\t\n\treturn emissive;\n}\n\nvec3 getMatSpecularColor(int materialIndex, vec2 uv) {\n\tvec3 specularColor = materials.specularColorGlossiness[materialIndex].rgb;\n\n\t#ifdef NUM_PBR_SG_MAPS\n\t\tint specularMapIndex = materials.emissiveSpecularGlossinessMapIndex[materialIndex].y;\n\t\tif (specularMapIndex >= 0) {\n\t\t\tvec3 texelSpecular = texture(pbrSGMap, vec3(uv * materials.pbrMapSize[specularMapIndex].xy, specularMapIndex)).rgb;\n\t\t\ttexelSpecular = pow(texelSpecular, vec3(2.2));\n\t\t\tspecularColor *= texelSpecular;\n\t\t}\n\t#endif\n\n\treturn specularColor;\n}\n\nfloat getMatGlossiness(int materialIndex, vec2 uv) {\n\tfloat glossiness = materials.specularColorGlossiness[materialIndex].a;\n\t#ifdef NUM_PBR_SG_MAPS\n\t\tint glossinessMapIndex = materials.emissiveSpecularGlossinessMapIndex[materialIndex].z;\n\t\tif (glossinessMapIndex >= 0) {\n\t\t\tfloat texelGlossiness = texture(pbrSGMap, vec3(uv * materials.pbrMapSize[glossinessMapIndex].xy, glossinessMapIndex)).a;\n\t\t\tglossiness *= texelGlossiness;\n\t\t}\n\t#endif\n\treturn glossiness;\n}\n\nfloat getMatRoughness(int materialIndex, vec2 uv) {\n\tfloat workflow = getMatWorkflow(materialIndex);\n\tfloat roughness = 0.0;\n\tif (workflow > 0.1) {\n\t\troughness = 1.0 - getMatGlossiness(materialIndex, uv);\n\t} else {\n\t\troughness = materials.roughnessMetalnessNormalScale[materialIndex].x;\n\n\t\t#ifdef NUM_PBR_MAPS\n\t\t\tint roughnessMapIndex = materials.diffuseNormalRoughnessMetalnessMapIndex[materialIndex].z;\n\t\t\tif (roughnessMapIndex >= 0) {\n\t\t\t\troughness *= texture(pbrMap, vec3(uv * materials.pbrMapSize[roughnessMapIndex].xy, roughnessMapIndex)).g;\n\t\t\t}\n\t\t#endif\n\t}\n\t// Remap\n\treturn roughness * roughness;\n}\n\nfloat max3(const vec3 v) {\n\treturn max(v.x, max(v.y, v.z));\n}\n\nfloat computeMetallicFromSpecularColor(const vec3 specularColor) {\n\treturn max3(specularColor);\n}\n\nvec3 computeDiffuseColor(const vec3 baseColor, float metallic) {\n\treturn baseColor * (1.0 - metallic);\n}\n\nfloat getMatMetalness(int materialIndex, vec2 uv) {\n\tfloat workflow = getMatWorkflow(materialIndex);\n\tfloat metalness = 0.0;\n\tif (workflow > 0.1) {\n\t\tvec3 specularFactor = getMatSpecularColor(materialIndex, uv);\n\t\tmetalness = computeMetallicFromSpecularColor(specularFactor);\n\t} else {\n\t\tmetalness = materials.roughnessMetalnessNormalScale[materialIndex].y;\n\n\t\t#ifdef NUM_PBR_MAPS\n\t\t\tint metalnessMapIndex = materials.diffuseNormalRoughnessMetalnessMapIndex[materialIndex].w;\n\t\t\tif (metalnessMapIndex >= 0) {\n\t\t\t\tmetalness *= texture(pbrMap, vec3(uv * materials.pbrMapSize[metalnessMapIndex].xy, metalnessMapIndex)).b;\n\t\t\t}\n\t\t#endif\n\t}\n\n\treturn metalness;\n}\n\nvec3 getMatColor(int materialIndex, vec2 uv) {\n\t// if (enableAlbedo && bounce == 0) return vec3(1.);\n\tvec3 color = materials.colorAndMaterialType[materialIndex].rgb;\n\t#ifdef NUM_DIFFUSE_MAPS\n\t\tint diffuseMapIndex = materials.diffuseNormalRoughnessMetalnessMapIndex[materialIndex].x;\n\t\tif (diffuseMapIndex >= 0) {\n\t\t\tcolor *= texture(diffuseMap, vec3(uv * materials.diffuseNormalMapSize[diffuseMapIndex].xy, diffuseMapIndex)).rgb;\n\t\t}\n\t#endif\n\n\tfloat workflow = getMatWorkflow(materialIndex);\n\tif (workflow > 0.1) {\n\t\tvec3 specularFactor = getMatSpecularColor(materialIndex, uv);\n\t\tcolor = computeDiffuseColor(color, computeMetallicFromSpecularColor(specularFactor));\n\t}\n\n\treturn color;\n}\n\nvec3 getMatNormal(int materialIndex, vec2 uv, vec3 normal, vec3 dp1, vec3 dp2, vec2 duv1, vec2 duv2, inout vec3 tangent, inout vec3 bitangent) {\n\t// http://www.thetenthplanet.de/archives/1180\n\t// Compute co-tangent and co-bitangent vectors\n\tvec3 dp2perp = cross(dp2, normal);\n\tvec3 dp1perp = cross(normal, dp1);\n\tvec3 dpdu = dp2perp * duv1.x + dp1perp * duv2.x;\n\tvec3 dpdv = dp2perp * duv1.y + dp1perp * duv2.y;\n\tfloat invmax = inversesqrt(max(dot(dpdu, dpdu), dot(dpdv, dpdv)));\n\tdpdu *= invmax;\n\tdpdv *= invmax;\n\n\t// All world space\n\t// Todo: /3ed-2018/Materials/BSDFs => WorldToLocal/LocalToWorld\n\ttangent = normalize(dpdu);\n\tbitangent = normalize(dpdv);\n\n#ifdef NUM_NORMAL_MAPS\n\tint normalMapIndex = materials.diffuseNormalRoughnessMetalnessMapIndex[materialIndex].y;\n\tif (normalMapIndex >= 0) {\n\t\tvec3 n = 2.0 * texture(normalMap, vec3(uv * materials.diffuseNormalMapSize[normalMapIndex].zw, normalMapIndex)).rgb - 1.0;\n\t\tn.xy *= materials.roughnessMetalnessNormalScale[materialIndex].zw;\n\n\t\tmat3 tbn = mat3(dpdu, dpdv, normal);\n\n\t\treturn normalize(tbn * n);\n\t} else {\n\t\treturn normal;\n\t}\n#endif\n\n\treturn normal;\n}\n\n// alphaSpecularTintSheenSheenTint\nfloat getMatAlpha(int materialIndex, vec2 uv) {\n\tfloat alpha =  materials.alphaSpecularTintSheenSheenTint[materialIndex].x;\n\t#ifdef NUM_DIFFUSE_MAPS\n\t\tint diffuseMapIndex = materials.diffuseNormalRoughnessMetalnessMapIndex[materialIndex].x;\n\t\tif (diffuseMapIndex >= 0) {\n\t\t\talpha *= texture(diffuseMap, vec3(uv * materials.diffuseNormalMapSize[diffuseMapIndex].xy, diffuseMapIndex)).a;\n\t\t}\n\t#endif\n\treturn alpha;\n}\n\nfloat getMatSpecularTint(int materialIndex) {\n\treturn materials.alphaSpecularTintSheenSheenTint[materialIndex].y;\n}\n\nfloat getMatSheen(int materialIndex) {\n\treturn materials.alphaSpecularTintSheenSheenTint[materialIndex].z;\n}\n\nfloat getMatSheenTint(int materialIndex) {\n\treturn materials.alphaSpecularTintSheenSheenTint[materialIndex].w;\n}\n\n// clearcoaRoughnessSubfaceTransmission\nfloat getMatClearcoat(int materialIndex) {\n\treturn materials.clearcoaRoughnessSubfaceTransmission[materialIndex].x;\n}\n\nfloat getMatClearcoatRoughness(int materialIndex) {\n\treturn materials.clearcoaRoughnessSubfaceTransmission[materialIndex].y;\n}\n\nfloat getMatSubface(int materialIndex) {\n\treturn materials.clearcoaRoughnessSubfaceTransmission[materialIndex].z;\n}\n\nfloat getMatTransmission(int materialIndex) {\n\treturn materials.clearcoaRoughnessSubfaceTransmission[materialIndex].w;\n}\n\n// iorAtDistanceAnisotropicWorkflow\nfloat getMatIOR(int materialIndex) {\n\treturn materials.iorAtDistanceAnisotropicWorkflow[materialIndex].x;\n}\n\nfloat getMatAtDistance(int materialIndex) {\n\treturn materials.iorAtDistanceAnisotropicWorkflow[materialIndex].y;\n}\n\nfloat getMatAnisotropic(int materialIndex) {\n\treturn materials.iorAtDistanceAnisotropicWorkflow[materialIndex].z;\n}\n\nvec3 getMatExtinction(int materialIndex) {\n\treturn materials.extinction[materialIndex].rgb;\n}",
-            ],
-            source: "void main() {}",
-          },
-          defines: s,
-        }).program,
-        r
-      ),
-      { defines: s, textures: o }
+    return indices;
+  }
+
+  // function b(...e) {
+  //   let t = 0;
+  //   for (let n = 0; n < e.length; n++) {
+  //     const a = e[n],
+  //       i = a.data ? a.data.length / a.channels : 0;
+  //     t = Math.max(t, i);
+  //   }
+
+  //   const a = [];
+  //   for (let n = 0; n < t; n++)
+  //     for (let t = 0; t < e.length; t++) {
+  //       const { data: i = [], channels: o } = e[t];
+  //       for (let e = 0; e < o; e++) a.push(i[n * o + e]);
+  //     }
+  //   return a;
+  // }
+
+  // RayTracingRenderer
+
+  function getUniformBlockInfo(gl, program, blockIndex) {
+    const indices = gl.getActiveUniformBlockParameter(
+      program,
+      blockIndex,
+      gl.UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES
     );
+
+    const offset = gl.getActiveUniforms(program, indices, gl.UNIFORM_OFFSET);
+
+    const stride = gl.getActiveUniforms(
+      program,
+      indices,
+      gl.UNIFORM_ARRAY_STRIDE
+    );
+
+    const uniforms = {};
+
+    for (let i = 0; i < indices.length; i++) {
+      const { name, type, size } = gl.getActiveUniform(program, indices[i]);
+
+      uniforms[name] = {
+        type,
+        size,
+        offset: offset[i],
+        stride: stride[i],
+      };
+    }
+
+    return uniforms;
   }
-  class X {
-    constructor(e = 0, t = 0, a = 0) {
-      (this.x = e), (this.y = t), (this.z = a);
+
+  function makeUniformBuffer(gl, program, blockName) {
+    const blockIndex = gl.getUniformBlockIndex(program, blockName);
+    const blockSize = gl.getActiveUniformBlockParameter(
+      program,
+      blockIndex,
+      gl.UNIFORM_BLOCK_DATA_SIZE
+    );
+
+    const uniforms = getUniformBlockInfo(gl, program, blockIndex);
+
+    const buffer = gl.createBuffer();
+
+    gl.bindBuffer(gl.UNIFORM_BUFFER, buffer);
+    gl.bufferData(gl.UNIFORM_BUFFER, blockSize, gl.STATIC_DRAW);
+
+    const data = new DataView(new ArrayBuffer(blockSize));
+
+    function set(name, value) {
+      if (!uniforms[name]) {
+        // console.warn('No uniform property with name ', name);
+        return;
+      }
+
+      const { type, size, offset, stride } = uniforms[name];
+
+      switch (type) {
+        case gl.FLOAT:
+          setData(data, "setFloat32", size, offset, stride, 1, value);
+          break;
+        case gl.FLOAT_VEC2:
+          setData(data, "setFloat32", size, offset, stride, 2, value);
+          break;
+        case gl.FLOAT_VEC3:
+          setData(data, "setFloat32", size, offset, stride, 3, value);
+          break;
+        case gl.FLOAT_VEC4:
+          setData(data, "setFloat32", size, offset, stride, 4, value);
+          break;
+        case gl.INT:
+          setData(data, "setInt32", size, offset, stride, 1, value);
+          break;
+        case gl.INT_VEC2:
+          setData(data, "setInt32", size, offset, stride, 2, value);
+          break;
+        case gl.INT_VEC3:
+          setData(data, "setInt32", size, offset, stride, 3, value);
+          break;
+        case gl.INT_VEC4:
+          setData(data, "setInt32", size, offset, stride, 4, value);
+          break;
+        case gl.BOOL:
+          setData(data, "setUint32", size, offset, stride, 1, value);
+          break;
+        default:
+          console.warn("UniformBuffer: Unsupported type");
+      }
     }
-    length() {
-      return Math.sqrt(this.x * this.x + this.y * this.y + this.z * this.z);
+
+    function bind(index) {
+      gl.bindBuffer(gl.UNIFORM_BUFFER, buffer);
+      gl.bufferSubData(gl.UNIFORM_BUFFER, 0, data);
+      gl.bindBufferBase(gl.UNIFORM_BUFFER, index, buffer);
     }
-    addVectors(e, t) {
-      return (
-        (this.x = e.x + t.x), (this.y = e.y + t.y), (this.z = e.z + t.z), this
-      );
-    }
-    subVectors(e, t) {
-      return (
-        (this.x = e.x - t.x), (this.y = e.y - t.y), (this.z = e.z - t.z), this
-      );
-    }
-    multiplyScalar(e) {
-      return (this.x *= e), (this.y *= e), (this.z *= e), this;
-    }
-    divide(e) {
-      return (this.x /= e.x), (this.y /= e.y), (this.z /= e.z), this;
-    }
-    divideScalar(e) {
-      return this.multiplyScalar(1 / e);
-    }
-    min(e) {
-      return (
-        (this.x = Math.min(this.x, e.x)),
-        (this.y = Math.min(this.y, e.y)),
-        (this.z = Math.min(this.z, e.z)),
-        this
-      );
-    }
-    max(e) {
-      return (
-        (this.x = Math.max(this.x, e.x)),
-        (this.y = Math.max(this.y, e.y)),
-        (this.z = Math.max(this.z, e.z)),
-        this
-      );
-    }
-    dot(e) {
-      return this.x * e.x + this.y * e.y + this.z * e.z;
-    }
-    normalize() {
-      return this.divideScalar(this.length() || 1);
-    }
-    crossVectors(e, t) {
-      const a = e.x,
-        n = e.y,
-        i = e.z,
-        o = t.x,
-        r = t.y,
-        s = t.z;
-      return (
-        (this.x = n * s - i * r),
-        (this.y = i * o - a * s),
-        (this.z = a * r - n * o),
-        this
-      );
-    }
-    fromBufferAttribute(e, t, a) {
-      return (
-        void 0 !== a &&
-          console.warn(
-            "THREE.Vector3: offset has been removed from .fromBufferAttribute()."
-          ),
-        (this.x = e.getX(t)),
-        (this.y = e.getY(t)),
-        (this.z = e.getZ(t)),
-        this
-      );
-    }
+
+    return {
+      set,
+      bind,
+    };
   }
-  class z {
-    constructor(
-      e = new X(1 / 0, 1 / 0, 1 / 0),
-      t = new X(-1 / 0, -1 / 0, -1 / 0)
-    ) {
-      (this.min = e), (this.max = t);
-    }
-    isEmpty() {
-      return (
-        this.max.x < this.min.x ||
-        this.max.y < this.min.y ||
-        this.max.z < this.min.z
-      );
-    }
-    getCenter(e) {
-      return this.isEmpty()
-        ? e.set(0, 0, 0)
-        : e.addVectors(this.min, this.max).multiplyScalar(0.5);
-    }
-    getSize(e) {
-      return this.isEmpty() ? e.set(0, 0, 0) : e.subVectors(this.max, this.min);
-    }
-    expandByPoint(e) {
-      return this.min.min(e), this.max.max(e), this;
-    }
-    union(e) {
-      return this.min.min(e.min), this.max.max(e.max), this;
-    }
-  }
-  function B(e, t, a) {
-    const n = e[a];
-    (e[a] = e[t]), (e[t] = n);
-  }
-  const V = new X();
-  function C(e, t) {
-    return { primitives: e, bounds: t };
-  }
-  function w(e, t, a) {
-    let n = a[t] - e.min[t];
-    return e.max[t] > e.min[t] && (n /= e.max[t] - e.min[t]), n;
-  }
-  function Q(e) {
-    return e.getSize(V), 2 * (V.x * V.z + V.x * V.y + V.z * V.y);
-  }
-  function D(e, t, a) {
-    const n = new z();
-    for (let l = t; l < a; l++) n.union(e[l].bounds);
-    const i = a - t;
-    if (1 === i) return C(e.slice(t, a), n);
-    {
-      const l = new z();
-      for (let n = t; n < a; n++) l.expandByPoint(e[n].center);
-      const f =
-        (l.getSize(V),
-        V.x > V.z ? (V.x > V.y ? "x" : "y") : V.z > V.y ? "z" : "y");
-      let d = Math.floor((t + a) / 2);
-      if (i <= 4)
-        !(function (e, t, a = 0, n = e.length, i = Math.floor((a + n) / 2)) {
-          for (let o = a; o <= i; o++) {
-            let a = o,
-              i = e[o];
-            for (let r = o + 1; r < n; r++)
-              t(i, e[r]) || ((a = r), (i = e[r]), B(e, o, a));
-          }
-        })(e, (e, t) => e.center[f] < t.center[f], t, a, d);
-      else {
-        if (l.max[f] === l.min[f]) return C(e.slice(t, a), n);
+
+  // Upload arrays to uniform buffer objects
+  // Packs different arrays into vec4's to take advantage of GLSL's std140 memory layout
+
+  function uploadToUniformBuffer(gl, program, bufferData) {
+    const materialBuffer = makeUniformBuffer(gl, program, "Materials");
+
+    materialBuffer.set(
+      "Materials.colorAndMaterialType[0]",
+      interleave(
         {
-          const i = 12,
-            o = [];
-          for (let e = 0; e < i; e++) o.push({ bounds: new z(), count: 0 });
-          for (let n = t; n < a; n++) {
-            let t = Math.floor(i * w(l, f, e[n].center));
-            t === o.length && (t = o.length - 1),
-              o[t].count++,
-              o[t].bounds.union(e[n].bounds);
+          data: [].concat(...bufferData.color.map((d) => d.toArray())),
+          channels: 3,
+        },
+        { data: bufferData.type, channels: 1 }
+      )
+    );
+
+    materialBuffer.set(
+      "Materials.roughnessMetalnessNormalScale[0]",
+      interleave(
+        { data: bufferData.roughness, channels: 1 },
+        { data: bufferData.metalness, channels: 1 },
+        {
+          data: [].concat(...bufferData.normalScale.map((d) => d.toArray())),
+          channels: 2,
+        }
+      )
+    );
+
+    materialBuffer.set(
+      "Materials.alphaSpecularTintSheenSheenTint[0]",
+      interleave(
+        { data: bufferData.alpha, channels: 1 },
+        { data: bufferData.specularTint, channels: 1 },
+        { data: bufferData.sheen, channels: 1 },
+        { data: bufferData.sheenTint, channels: 1 }
+      )
+    );
+
+    materialBuffer.set(
+      "Materials.clearcoaRoughnessSubfaceTransmission[0]",
+      interleave(
+        { data: bufferData.clearcoat, channels: 1 },
+        { data: bufferData.clearcoatRoughness, channels: 1 },
+        { data: bufferData.subsurface, channels: 1 },
+        { data: bufferData.transmission, channels: 1 }
+      )
+    );
+
+    materialBuffer.set(
+      "Materials.iorAtDistanceAnisotropicWorkflow[0]",
+      interleave(
+        { data: bufferData.ior, channels: 1 },
+        { data: bufferData.atDistance, channels: 1 },
+        { data: bufferData.anisotropic, channels: 1 },
+        { data: bufferData.workflow, channels: 1 }
+      )
+    );
+
+    materialBuffer.set(
+      "Materials.specularColorGlossiness[0]",
+      interleave(
+        {
+          data: [].concat(...bufferData.specularColor.map((d) => d.toArray())),
+          channels: 3,
+        },
+        { data: bufferData.glossiness, channels: 1 }
+      )
+    );
+
+    materialBuffer.set(
+      "Materials.extinction[0]",
+      interleave(
+        {
+          data: [].concat(...bufferData.extinction.map((d) => d.toArray())),
+          channels: 3,
+        },
+        { data: bufferData.anisotropic, channels: 1 }
+      )
+    );
+
+    materialBuffer.set(
+      "Materials.diffuseNormalRoughnessMetalnessMapIndex[0]",
+      interleave(
+        { data: bufferData.diffuseMapIndex, channels: 1 },
+        { data: bufferData.normalMapIndex, channels: 1 },
+        { data: bufferData.roughnessMapIndex, channels: 1 },
+        { data: bufferData.metalnessMapIndex, channels: 1 }
+      )
+    );
+
+    materialBuffer.set(
+      "Materials.emissiveSpecularGlossinessMapIndex[0]",
+      interleave(
+        { data: bufferData.emissiveMapIndex, channels: 1 },
+        { data: bufferData.specularMapIndex, channels: 1 },
+        { data: bufferData.glossinessMapIndex, channels: 1 },
+        { data: bufferData.emissiveMapIndex, channels: 1 }
+      )
+    );
+
+    materialBuffer.set(
+      "Materials.diffuseNormalMapSize[0]",
+      interleave(
+        { data: bufferData.diffuseMapSize, channels: 2 },
+        { data: bufferData.normalMapSize, channels: 2 }
+      )
+    );
+
+    materialBuffer.set("Materials.pbrMapSize[0]", bufferData.pbrMapSize);
+
+    materialBuffer.bind(0);
+  }
+
+  function maxImageSize(images) {
+    const maxSize = { width: 0, height: 0 };
+    for (const image of images) {
+      maxSize.width = Math.max(maxSize.width, image.width);
+      maxSize.height = Math.max(maxSize.height, image.height);
+    }
+
+    const relativeSizes = [];
+
+    for (const image of images) {
+      relativeSizes.push(image.width / maxSize.width);
+      relativeSizes.push(image.height / maxSize.height);
+    }
+
+    return { maxSize, relativeSizes };
+  }
+
+  function makeTextureArray(
+    gl,
+    textures,
+    gammaCorrection = false,
+    channels = 3
+  ) {
+    const images = textures.map((t) => t.image);
+    const flipY = textures.map((t) => t.flipY);
+
+    const { maxSize, relativeSizes } = maxImageSize(images);
+
+    // create GL Array Texture from individual textures
+    const texture = makeTexture(gl, {
+      width: maxSize.width,
+      height: maxSize.height,
+      gammaCorrection,
+      data: images,
+      flipY,
+      channels,
+      minFilter: gl.LINEAR,
+      magFilter: gl.LINEAR,
+    });
+
+    return {
+      texture,
+      relativeSizes,
+    };
+  }
+
+  // texturesFromMaterials
+
+  // retrieve textures used by meshes, grouping textures from meshes shared by *the same* mesh property
+  function getTexturesFromMaterials(materials, textureNames) {
+    const textureMap = {};
+
+    for (const name of textureNames) {
+      const textures = [];
+      const indices = texturesFromMaterials(materials, name, textures);
+
+      textureMap[name] = { indices, textures };
+    }
+
+    return textureMap;
+  }
+
+  // MaterialBuffer
+
+  var materialBufferChunk =
+    "uniform Materials {\n\tvec4 colorAndMaterialType[NUM_MATERIALS];\n\tvec4 roughnessMetalnessNormalScale[NUM_MATERIALS];\n\tvec4 alphaSpecularTintSheenSheenTint[NUM_MATERIALS];\n\tvec4 clearcoaRoughnessSubfaceTransmission[NUM_MATERIALS];\n\tvec4 iorAtDistanceAnisotropicWorkflow[NUM_MATERIALS];\n\tvec4 extinction[NUM_MATERIALS];\n\tvec4 specularColorGlossiness[NUM_MATERIALS];\n\n\t#if defined(NUM_DIFFUSE_MAPS) || defined(NUM_NORMAL_MAPS) || defined(NUM_PBR_MAPS)\n\t\tivec4 diffuseNormalRoughnessMetalnessMapIndex[NUM_MATERIALS];\n\t#endif\n\n\t#if defined(NUM_EMISSIVE_MAPS) || defined(NUM_PBR_SG_MAPS)\n\t\tivec4 emissiveSpecularGlossinessMapIndex[NUM_MATERIALS];\n\t#endif\n\n\t#if defined(NUM_DIFFUSE_MAPS) || defined(NUM_NORMAL_MAPS)\n\t\tvec4 diffuseNormalMapSize[NUM_DIFFUSE_NORMAL_MAPS];\n\t#endif\n\n\t#if defined(NUM_PBR_MAPS)\n\t\tvec2 pbrMapSize[NUM_PBR_MAPS];\n\t#else\n\t\t#if defined(NUM_PBR_SG_MAPS)\n\t\t\tvec2 pbrMapSize[NUM_PBR_SG_MAPS];\n\t\t#else\n\t\t\t#if defined(NUM_EMISSIVE_MAPS)\n\t\t\t\tvec2 pbrMapSize[NUM_EMISSIVE_MAPS];\n\t\t\t#endif\n\t\t#endif\n\t#endif\n} materials;\n\n#ifdef NUM_DIFFUSE_MAPS\n\tuniform mediump sampler2DArray diffuseMap;\n#endif\n\n#ifdef NUM_NORMAL_MAPS\n\tuniform mediump sampler2DArray normalMap;\n#endif\n\n#ifdef NUM_PBR_MAPS\n\tuniform mediump sampler2DArray pbrMap;\n#endif\n\n#ifdef NUM_PBR_SG_MAPS\n\tuniform mediump sampler2DArray pbrSGMap;\n#endif\n\n#ifdef NUM_EMISSIVE_MAPS\n\tuniform mediump sampler2DArray emissiveMap;\n#endif\n\nfloat getMatType(int materialIndex) {\n\treturn materials.colorAndMaterialType[materialIndex].w;\n}\n\nfloat getMatWorkflow(int materialIndex) {\n\treturn materials.iorAtDistanceAnisotropicWorkflow[materialIndex].w;\n}\n\nvec3 getMatEmissive(int materialIndex, vec2 uv) {\n\t// Todo: emissive Intensity\n\tvec3 emissive = vec3(0.0);\n\n\t#ifdef NUM_EMISSIVE_MAPS\n\t\tint emissiveMapIndex = materials.emissiveSpecularGlossinessMapIndex[materialIndex].x;\n\t\tif (emissiveMapIndex >= 0) {\n\t\t\temissive = texture(emissiveMap, vec3(uv * materials.pbrMapSize[emissiveMapIndex].xy, emissiveMapIndex)).rgb;\n\t\t}\n\t#endif\n\t\n\treturn emissive;\n}\n\nvec3 getMatSpecularColor(int materialIndex, vec2 uv) {\n\tvec3 specularColor = materials.specularColorGlossiness[materialIndex].rgb;\n\n\t#ifdef NUM_PBR_SG_MAPS\n\t\tint specularMapIndex = materials.emissiveSpecularGlossinessMapIndex[materialIndex].y;\n\t\tif (specularMapIndex >= 0) {\n\t\t\tvec3 texelSpecular = texture(pbrSGMap, vec3(uv * materials.pbrMapSize[specularMapIndex].xy, specularMapIndex)).rgb;\n\t\t\ttexelSpecular = pow(texelSpecular, vec3(2.2));\n\t\t\tspecularColor *= texelSpecular;\n\t\t}\n\t#endif\n\n\treturn specularColor;\n}\n\nfloat getMatGlossiness(int materialIndex, vec2 uv) {\n\tfloat glossiness = materials.specularColorGlossiness[materialIndex].a;\n\t#ifdef NUM_PBR_SG_MAPS\n\t\tint glossinessMapIndex = materials.emissiveSpecularGlossinessMapIndex[materialIndex].z;\n\t\tif (glossinessMapIndex >= 0) {\n\t\t\tfloat texelGlossiness = texture(pbrSGMap, vec3(uv * materials.pbrMapSize[glossinessMapIndex].xy, glossinessMapIndex)).a;\n\t\t\tglossiness *= texelGlossiness;\n\t\t}\n\t#endif\n\treturn glossiness;\n}\n\nfloat getMatRoughness(int materialIndex, vec2 uv) {\n\tfloat workflow = getMatWorkflow(materialIndex);\n\tfloat roughness = 0.0;\n\tif (workflow > 0.1) {\n\t\troughness = 1.0 - getMatGlossiness(materialIndex, uv);\n\t} else {\n\t\troughness = materials.roughnessMetalnessNormalScale[materialIndex].x;\n\n\t\t#ifdef NUM_PBR_MAPS\n\t\t\tint roughnessMapIndex = materials.diffuseNormalRoughnessMetalnessMapIndex[materialIndex].z;\n\t\t\tif (roughnessMapIndex >= 0) {\n\t\t\t\troughness *= texture(pbrMap, vec3(uv * materials.pbrMapSize[roughnessMapIndex].xy, roughnessMapIndex)).g;\n\t\t\t}\n\t\t#endif\n\t}\n\t// Remap\n\treturn roughness * roughness;\n}\n\nfloat max3(const vec3 v) {\n\treturn max(v.x, max(v.y, v.z));\n}\n\nfloat computeMetallicFromSpecularColor(const vec3 specularColor) {\n\treturn max3(specularColor);\n}\n\nvec3 computeDiffuseColor(const vec3 baseColor, float metallic) {\n\treturn baseColor * (1.0 - metallic);\n}\n\nfloat getMatMetalness(int materialIndex, vec2 uv) {\n\tfloat workflow = getMatWorkflow(materialIndex);\n\tfloat metalness = 0.0;\n\tif (workflow > 0.1) {\n\t\tvec3 specularFactor = getMatSpecularColor(materialIndex, uv);\n\t\tmetalness = computeMetallicFromSpecularColor(specularFactor);\n\t} else {\n\t\tmetalness = materials.roughnessMetalnessNormalScale[materialIndex].y;\n\n\t\t#ifdef NUM_PBR_MAPS\n\t\t\tint metalnessMapIndex = materials.diffuseNormalRoughnessMetalnessMapIndex[materialIndex].w;\n\t\t\tif (metalnessMapIndex >= 0) {\n\t\t\t\tmetalness *= texture(pbrMap, vec3(uv * materials.pbrMapSize[metalnessMapIndex].xy, metalnessMapIndex)).b;\n\t\t\t}\n\t\t#endif\n\t}\n\n\treturn metalness;\n}\n\nvec3 getMatColor(int materialIndex, vec2 uv) {\n\t// if (enableAlbedo && bounce == 0) return vec3(1.);\n\tvec3 color = materials.colorAndMaterialType[materialIndex].rgb;\n\t#ifdef NUM_DIFFUSE_MAPS\n\t\tint diffuseMapIndex = materials.diffuseNormalRoughnessMetalnessMapIndex[materialIndex].x;\n\t\tif (diffuseMapIndex >= 0) {\n\t\t\tcolor *= texture(diffuseMap, vec3(uv * materials.diffuseNormalMapSize[diffuseMapIndex].xy, diffuseMapIndex)).rgb;\n\t\t}\n\t#endif\n\n\tfloat workflow = getMatWorkflow(materialIndex);\n\tif (workflow > 0.1) {\n\t\tvec3 specularFactor = getMatSpecularColor(materialIndex, uv);\n\t\tcolor = computeDiffuseColor(color, computeMetallicFromSpecularColor(specularFactor));\n\t}\n\n\treturn color;\n}\n\nvec3 getMatNormal(int materialIndex, vec2 uv, vec3 normal, vec3 dp1, vec3 dp2, vec2 duv1, vec2 duv2, inout vec3 tangent, inout vec3 bitangent) {\n\t// http://www.thetenthplanet.de/archives/1180\n\t// Compute co-tangent and co-bitangent vectors\n\tvec3 dp2perp = cross(dp2, normal);\n\tvec3 dp1perp = cross(normal, dp1);\n\tvec3 dpdu = dp2perp * duv1.x + dp1perp * duv2.x;\n\tvec3 dpdv = dp2perp * duv1.y + dp1perp * duv2.y;\n\tfloat invmax = inversesqrt(max(dot(dpdu, dpdu), dot(dpdv, dpdv)));\n\tdpdu *= invmax;\n\tdpdv *= invmax;\n\n\t// All world space\n\t// Todo: /3ed-2018/Materials/BSDFs => WorldToLocal/LocalToWorld\n\ttangent = normalize(dpdu);\n\tbitangent = normalize(dpdv);\n\n#ifdef NUM_NORMAL_MAPS\n\tint normalMapIndex = materials.diffuseNormalRoughnessMetalnessMapIndex[materialIndex].y;\n\tif (normalMapIndex >= 0) {\n\t\tvec3 n = 2.0 * texture(normalMap, vec3(uv * materials.diffuseNormalMapSize[normalMapIndex].zw, normalMapIndex)).rgb - 1.0;\n\t\tn.xy *= materials.roughnessMetalnessNormalScale[materialIndex].zw;\n\n\t\tmat3 tbn = mat3(dpdu, dpdv, normal);\n\n\t\treturn normalize(tbn * n);\n\t} else {\n\t\treturn normal;\n\t}\n#endif\n\n\treturn normal;\n}\n\n// alphaSpecularTintSheenSheenTint\nfloat getMatAlpha(int materialIndex, vec2 uv) {\n\tfloat alpha =  materials.alphaSpecularTintSheenSheenTint[materialIndex].x;\n\t#ifdef NUM_DIFFUSE_MAPS\n\t\tint diffuseMapIndex = materials.diffuseNormalRoughnessMetalnessMapIndex[materialIndex].x;\n\t\tif (diffuseMapIndex >= 0) {\n\t\t\talpha *= texture(diffuseMap, vec3(uv * materials.diffuseNormalMapSize[diffuseMapIndex].xy, diffuseMapIndex)).a;\n\t\t}\n\t#endif\n\treturn alpha;\n}\n\nfloat getMatSpecularTint(int materialIndex) {\n\treturn materials.alphaSpecularTintSheenSheenTint[materialIndex].y;\n}\n\nfloat getMatSheen(int materialIndex) {\n\treturn materials.alphaSpecularTintSheenSheenTint[materialIndex].z;\n}\n\nfloat getMatSheenTint(int materialIndex) {\n\treturn materials.alphaSpecularTintSheenSheenTint[materialIndex].w;\n}\n\n// clearcoaRoughnessSubfaceTransmission\nfloat getMatClearcoat(int materialIndex) {\n\treturn materials.clearcoaRoughnessSubfaceTransmission[materialIndex].x;\n}\n\nfloat getMatClearcoatRoughness(int materialIndex) {\n\treturn materials.clearcoaRoughnessSubfaceTransmission[materialIndex].y;\n}\n\nfloat getMatSubface(int materialIndex) {\n\treturn materials.clearcoaRoughnessSubfaceTransmission[materialIndex].z;\n}\n\nfloat getMatTransmission(int materialIndex) {\n\treturn materials.clearcoaRoughnessSubfaceTransmission[materialIndex].w;\n}\n\n// iorAtDistanceAnisotropicWorkflow\nfloat getMatIOR(int materialIndex) {\n\treturn materials.iorAtDistanceAnisotropicWorkflow[materialIndex].x;\n}\n\nfloat getMatAtDistance(int materialIndex) {\n\treturn materials.iorAtDistanceAnisotropicWorkflow[materialIndex].y;\n}\n\nfloat getMatAnisotropic(int materialIndex) {\n\treturn materials.iorAtDistanceAnisotropicWorkflow[materialIndex].z;\n}\n\nvec3 getMatExtinction(int materialIndex) {\n\treturn materials.extinction[materialIndex].rgb;\n}";
+
+  function makeMaterialBuffer(gl, materials) {
+    const maps = getTexturesFromMaterials(materials, [
+      "map",
+      "normalMap",
+      "emissiveMap",
+    ]);
+
+    const pbrMap = mergeTexturesFromMaterials(materials, [
+      "roughnessMap",
+      "metalnessMap",
+    ]);
+
+    const pbrSgMap = mergeTexturesFromMaterials(materials, [
+      "specularMap",
+      "glossinessMap",
+    ]);
+
+    const textures = {};
+    const bufferData = {};
+
+    bufferData.color = materials.map((m) => m.color);
+    bufferData.roughness = materials.map((m) => m.roughness);
+    bufferData.metalness = materials.map((m) => m.metalness);
+    bufferData.normalScale = materials.map((m) => m.normalScale);
+    bufferData.specularTint = materials.map((m) => m.specularTint);
+    bufferData.sheen = materials.map((m) => m.sheen);
+    bufferData.sheenTint = materials.map((m) => m.sheenTint);
+    bufferData.clearcoat = materials.map((m) => m.clearcoat);
+    bufferData.clearcoatRoughness = materials.map((m) => m.clearcoatRoughness);
+    bufferData.transmission = materials.map((m) => m.transmission);
+    bufferData.subsurface = materials.map((m) => m.subsurface);
+    bufferData.ior = materials.map((m) => m.ior);
+    bufferData.atDistance = materials.map((m) => m.atDistance);
+    bufferData.extinction = materials.map((m) => m.extinction);
+    bufferData.alpha = materials.map((m) => m.alpha);
+    bufferData.workflow = materials.map((m) =>
+      "Metalness" === m.workflow ? 0 : 1
+    );
+    bufferData.specularColor = materials.map((m) => m.specularColor);
+    bufferData.glossiness = materials.map((m) => m.glossiness);
+    bufferData.type = materials.map(() => 0);
+
+    if (maps.map.textures.length > 0) {
+      const { relativeSizes, texture } = makeTextureArray(
+        gl,
+        maps.map.textures,
+        true,
+        4
+      );
+
+      bufferData.diffuseMap = texture;
+      bufferData.diffuseMapSize = relativeSizes;
+      bufferData.diffuseMapIndex = maps.map.indices;
+    }
+
+    if (maps.normalMap.textures.length > 0) {
+      const { relativeSizes, texture } = makeTextureArray(
+        gl,
+        maps.normalMap.textures,
+        false
+      );
+
+      textures.normalMap = texture;
+      bufferData.normalMapSize = relativeSizes;
+      bufferData.normalMapIndex = maps.normalMap.indices;
+    }
+
+    if (pbrMap.textures.length > 0) {
+      const { relativeSizes, texture } = makeTextureArray(
+        gl,
+        pbrMap.textures,
+        false
+      );
+
+      textures.pbrMap = texture;
+      bufferData.pbrMapSize = relativeSizes;
+      bufferData.roughnessMapIndex = pbrMap.indices.roughnessMap;
+      bufferData.metalnessMapIndex = pbrMap.indices.metalnessMap;
+    }
+
+    if (pbrSgMap.textures.length > 0) {
+      const { relativeSizes, texture } = makeTextureArray(
+        gl,
+        pbrSgMap.textures,
+        false,
+        4
+      );
+
+      textures.pbrSGMap = texture;
+      bufferData.pbrMapSize = relativeSizes;
+      bufferData.specularMapIndex = pbrSgMap.indices.specularMap;
+      bufferData.glossinessMapIndex = pbrSgMap.indices.glossinessMap;
+    }
+
+    if (maps.emissiveMap.textures.length > 0) {
+      const { relativeSizes, texture } = makeTextureArray(
+        gl,
+        maps.emissiveMap.textures,
+        true
+      );
+
+      textures.emissiveMap = texture;
+      bufferData.pbrMapSize || (bufferData.pbrMapSize = relativeSizes);
+      bufferData.emissiveMapIndex = maps.emissiveMap.indices;
+    }
+
+    const defines = {
+      NUM_MATERIALS: materials.length,
+      NUM_DIFFUSE_MAPS: maps.map.textures.length,
+      NUM_NORMAL_MAPS: maps.normalMap.textures.length,
+      NUM_DIFFUSE_NORMAL_MAPS: Math.max(
+        maps.map.textures.length,
+        maps.normalMap.textures.length
+      ),
+      NUM_PBR_MAPS: pbrMap.textures.length,
+      NUM_PBR_SG_MAPS: pbrSgMap.textures.length,
+      NUM_EMISSIVE_MAPS: maps.emissiveMap.textures.length,
+    };
+
+    // create temporary shader program including the Material uniform buffer
+    // used to query the compiled structure of the uniform buffer
+
+    const { program } = makeRenderPass(gl, {
+      vertex: { source: "void main() {}" },
+      fragment: {
+        includes: [materialBufferChunk],
+        source: "void main() {}",
+      },
+      defines,
+    });
+
+    uploadToUniformBuffer(gl, program, bufferData);
+
+    return { defines, textures };
+  }
+
+  function swap(array, a, b) {
+    const x = array[b];
+
+    array[b] = array[a];
+    array[a] = x;
+  }
+
+  const size = new THREE.Vector3();
+
+  function makeLeafNode(primitives, bounds) {
+    return {
+      primitives,
+      bounds,
+    };
+  }
+
+  function boxOffset(box3, dim, v) {
+    let offset = v[dim] - box3.min[dim];
+
+    if (box3.max[dim] > box3.min[dim]) {
+      offset /= box3.max[dim] - box3.min[dim];
+    }
+
+    return offset;
+  }
+
+  function surfaceArea(box3) {
+    box3.getSize(size);
+
+    return 2 * (size.x * size.z + size.x * size.y + size.z * size.y);
+  }
+
+  function maximumExtent(box3) {
+    box3.getSize(size);
+
+    if (size.x > size.z) {
+      return size.x > size.y ? "x" : "y";
+    } else {
+      return size.z > size.y ? "z" : "y";
+    }
+  }
+
+  // nth_element is a partial sorting algorithm that rearranges elements in [first, last) such that:
+  // The element pointed at by nth is changed to whatever element would occur in that position if [first, last) were sorted.
+  // All of the elements before this new nth element compare to true with elements after the nth element
+
+  function nthElement(
+    array,
+    compare,
+    left = 0,
+    right = array.length,
+    k = Math.floor((left + right) / 2)
+  ) {
+    for (let i = left; i <= k; i++) {
+      let minIndex = i;
+      let minValue = array[i];
+
+      for (let j = i + 1; j < right; j++) {
+        if (!compare(minValue, array[j])) {
+          minIndex = j;
+          minValue = array[j];
+          swap(array, i, minIndex);
+        }
+      }
+    }
+  }
+
+  // Reorders the elements in the range [first, last) in such a way that
+  // all elements for which the comparator c returns true
+  // precede the elements for which comparator c returns false.
+
+  function partition(array, compare, left = 0, right = array.length) {
+    while (left !== right) {
+      while (compare(array[left])) {
+        left++;
+        if (left === right) {
+          return left;
+        }
+      }
+
+      do {
+        right--;
+        if (left === right) {
+          return left;
+        }
+      } while (!compare(array[right]));
+
+      swap(array, left, right);
+      left++;
+    }
+
+    return left;
+  }
+
+  function makeInteriorNode(splitAxis, child0, child1) {
+    return {
+      child0,
+      child1,
+      bounds: new THREE.Box3().union(child0.bounds).union(child1.bounds),
+      splitAxis,
+    };
+  }
+
+  function recursiveBuild(primitiveInfo, start, end) {
+    const bounds = new THREE.Box3();
+
+    for (let i = start; i < end; i++) {
+      bounds.union(primitiveInfo[i].bounds);
+    }
+
+    const nPrimitives = end - start;
+
+    if (nPrimitives === 1) {
+      return makeLeafNode(primitiveInfo.slice(start, end), bounds);
+    } else {
+      const centroidBounds = new THREE.Box3();
+
+      for (let i = start; i < end; i++) {
+        centroidBounds.expandByPoint(primitiveInfo[i].center);
+      }
+
+      const dim = maximumExtent(centroidBounds);
+
+      let mid = Math.floor((start + end) / 2);
+
+      // middle split method
+      // const dimMid = (centroidBounds.max[dim] + centroidBounds.min[dim]) / 2;
+      // mid = partition(primitiveInfo, p => p.center[dim] < dimMid, start, end);
+
+      // if (mid === start || mid === end) {
+      //   mid = Math.floor((start + end) / 2);
+      //   nthElement(primitiveInfo, (a, b) => a.center[dim] < b.center[dim], start, end, mid);
+      // }
+
+      // surface area heuristic method
+
+      if (nPrimitives <= 4) {
+        nthElement(
+          primitiveInfo,
+          (a, b) => a.center[dim] < b.center[dim],
+          start,
+          end,
+          mid
+        );
+      } else if (centroidBounds.max[dim] === centroidBounds.min[dim]) {
+        // can't split primitives based on centroid bounds. terminate.
+
+        return makeLeafNode(primitiveInfo.slice(start, end), bounds);
+      } else {
+        const buckets = [];
+
+        for (let i = 0; i < 12; i++) {
+          buckets.push({ bounds: new THREE.Box3(), count: 0 });
+        }
+
+        for (let i = start; i < end; i++) {
+          let b = Math.floor(
+            buckets.length *
+              boxOffset(centroidBounds, dim, primitiveInfo[i].center)
+          );
+
+          if (b === buckets.length) {
+            b = buckets.length - 1;
           }
-          const r = [];
-          for (let e = 0; e < o.length - 1; e++) {
-            const t = new z(),
-              a = new z();
-            let i = 0,
-              s = 0;
-            for (let n = 0; n <= e; n++)
-              t.union(o[n].bounds), (i += o[n].count);
-            for (let n = e + 1; n < o.length; n++)
-              a.union(o[n].bounds), (s += o[n].count);
-            r.push(0.1 + (i * Q(t) + s * Q(a)) / Q(n));
+
+          buckets[b].count++;
+          buckets[b].bounds.union(primitiveInfo[i].bounds);
+        }
+
+        const cost = [];
+
+        for (let i = 0; i < buckets.length - 1; i++) {
+          const b0 = new THREE.Box3();
+          const b1 = new THREE.Box3();
+
+          let count0 = 0;
+          let count1 = 0;
+
+          for (let j = 0; j <= i; j++) {
+            b0.union(buckets[j].bounds);
+            count0 += buckets[j].count;
           }
-          let s = r[0],
-            c = 0;
-          for (let e = 1; e < r.length; e++) r[e] < s && ((s = r[e]), (c = e));
-          d = (function (e, t, a = 0, n = e.length) {
-            for (; a !== n; ) {
-              for (; t(e[a]); ) if (++a === n) return a;
-              do {
-                if (a === --n) return a;
-              } while (!t(e[n]));
-              B(e, a, n), a++;
-            }
-            return a;
-          })(
-            e,
-            (e) => {
-              let t = Math.floor(o.length * w(l, f, e.center));
-              return t === o.length && (t = o.length - 1), t <= c;
-            },
-            t,
-            a
+
+          for (let j = i + 1; j < buckets.length; j++) {
+            b1.union(buckets[j].bounds);
+            count1 += buckets[j].count;
+          }
+
+          cost.push(
+            0.1 +
+              (count0 * surfaceArea(b0) + count1 * surfaceArea(b1)) /
+                surfaceArea(bounds)
           );
         }
-      }
-      return (
-        (o = f),
-        (r = D(e, t, d)),
-        (s = D(e, d, a)),
-        {
-          child0: r,
-          child1: s,
-          bounds: new z().union(r.bounds).union(s.bounds),
-          splitAxis: o,
+
+        let minCost = cost[0];
+        let minCostSplitBucket = 0;
+
+        for (let i = 1; i < cost.length; i++) {
+          if (cost[i] < minCost) {
+            minCost = cost[i];
+            minCostSplitBucket = i;
+          }
         }
+
+        mid = partition(
+          primitiveInfo,
+          (p) => {
+            let b = Math.floor(
+              buckets.length * boxOffset(centroidBounds, dim, p.center)
+            );
+            if (b === buckets.length) {
+              b = buckets.length - 1;
+            }
+            return b <= minCostSplitBucket;
+          },
+          start,
+          end
+        );
+      }
+
+      return makeInteriorNode(
+        dim,
+        recursiveBuild(primitiveInfo, start, mid),
+        recursiveBuild(primitiveInfo, mid, end)
       );
     }
-    var o, r, s;
   }
-  function Y(e) {
-    const t = (function (e) {
-      const t = [],
-        a = e.getIndex ? e.getIndex().array : e.index.array,
-        n = e.getAttribute ? e.getAttribute("position") : e.attributes.position,
-        i = e.getAttribute
-          ? e.getAttribute("materialMeshIndex")
-          : e.attributes.materialMeshIndex,
-        o = new X(),
-        r = new X(),
-        s = new X(),
-        l = new X(),
-        f = new X();
-      for (let d = 0; d < a.length; d += 3) {
-        const e = a[d],
-          c = a[d + 1],
-          u = a[d + 2],
-          p = new z();
-        n.getX
-          ? (o.fromBufferAttribute(n, e),
-            r.fromBufferAttribute(n, c),
-            s.fromBufferAttribute(n, u))
-          : ((o.x = n.array[e * n.itemSize]),
-            (o.y = n.array[e * n.itemSize + 1]),
-            (o.z = n.array[e * n.itemSize + 2]),
-            (r.x = n.array[c * n.itemSize]),
-            (r.y = n.array[c * n.itemSize + 1]),
-            (r.z = n.array[c * n.itemSize + 2]),
-            (s.x = n.array[u * n.itemSize]),
-            (s.y = n.array[u * n.itemSize + 1]),
-            (s.z = n.array[u * n.itemSize + 2])),
-          p.expandByPoint(o),
-          p.expandByPoint(r),
-          p.expandByPoint(s),
-          l.subVectors(s, o),
-          f.subVectors(r, o);
-        const m = new X().crossVectors(f, l).normalize(),
-          L = {
-            bounds: p,
-            center: p.getCenter(new X()),
-            indices: [e, c, u],
-            faceNormal: m,
-            materialIndex: i.getX ? i.getX(e) : i.array[e * i.itemSize],
-          };
-        t.push(L);
+
+  function makePrimitiveInfo(geometry) {
+    const primitiveInfo = [];
+
+    const indices = geometry.getIndex
+      ? geometry.getIndex().array
+      : geometry.index.array;
+
+    const position = geometry.getAttribute
+      ? geometry.getAttribute("position")
+      : geometry.attributes.position;
+
+    const materialMeshIndex = geometry.getAttribute
+      ? geometry.getAttribute("materialMeshIndex")
+      : geometry.attributes.materialMeshIndex;
+
+    const v0 = new THREE.Vector3();
+    const v1 = new THREE.Vector3();
+    const v2 = new THREE.Vector3();
+    const e0 = new THREE.Vector3();
+    const e1 = new THREE.Vector3();
+
+    for (let d = 0; d < indices.length; d += 3) {
+      const i0 = indices[d];
+      const i1 = indices[d + 1];
+      const i2 = indices[d + 2];
+
+      const bounds = new THREE.Box3();
+
+      if (position.getX) {
+        v0.fromBufferAttribute(position, i0);
+        v1.fromBufferAttribute(position, i1);
+        v2.fromBufferAttribute(position, i2);
+      } else {
+        v0.x = position.array[i0 * position.itemSize];
+        v0.y = position.array[i0 * position.itemSize + 1];
+        v0.z = position.array[i0 * position.itemSize + 2];
+        v1.x = position.array[i1 * position.itemSize];
+        v1.y = position.array[i1 * position.itemSize + 1];
+        v1.z = position.array[i1 * position.itemSize + 2];
+        v2.x = position.array[i2 * position.itemSize];
+        v2.y = position.array[i2 * position.itemSize + 1];
+        v2.z = position.array[i2 * position.itemSize + 2];
       }
-      return t;
-    })(e);
-    return D(t, 0, t.length);
+
+      e0.subVectors(v2, v0);
+      e1.subVectors(v1, v0);
+
+      bounds.expandByPoint(v0);
+      bounds.expandByPoint(v1);
+      bounds.expandByPoint(v2);
+
+      const center = bounds.getCenter(new THREE.Vector3());
+
+      const faceNormal = new THREE.Vector3().crossVectors(e1, e0).normalize();
+
+      const materialIndex = materialMeshIndex.getX
+        ? materialMeshIndex.getX(i0)
+        : materialMeshIndex.array[i0 * materialMeshIndex.itemSize];
+
+      const info = {
+        bounds,
+        center,
+        indices: [i0, i1, i2],
+        faceNormal,
+        materialIndex,
+      };
+
+      primitiveInfo.push(info);
+    }
+    return primitiveInfo;
   }
+
+  function bvhAccel(geometry) {
+    const primitiveInfo = makePrimitiveInfo(geometry);
+    const node = recursiveBuild(primitiveInfo, 0, primitiveInfo.length);
+
+    return node;
+  }
+
   function W(e) {
     let t;
+    console.log(e);
     if (
       ((t = {
         width: e.data.image.width,
@@ -1697,7 +2027,7 @@ var __defProp = Object.defineProperty,
         data: e.data.image.data,
         dataFormat: "float",
       }),
-      e.data.type === n.UnsignedByteType
+      e.data.type === THREE.UnsignedByteType
         ? t.data
           ? (t.data = (function (e, t = 1) {
               const a = e.length / 4,
@@ -1710,9 +2040,10 @@ var __defProp = Object.defineProperty,
                   a = e[4 * o + 1],
                   r = e[4 * o + 2],
                   s = i[e[4 * o + 3]];
-                (n[3 * o] = t * s),
-                  (n[3 * o + 1] = a * s),
-                  (n[3 * o + 2] = r * s);
+
+                n[3 * o] = t * s;
+                n[3 * o + 1] = a * s;
+                n[3 * o + 2] = r * s;
               }
               return n;
             })(t.data, e.intensity))
@@ -1727,27 +2058,33 @@ var __defProp = Object.defineProperty,
               );
             })(e.data.image)),
             (t.dataFormat = "byte"))
-        : e.data.type == n.HalfFloatType
+        : e.data.type == THREE.HalfFloatType
         ? console.error(
             "Please use 'new RGBELoader().setDataType(THREE.FloatType)' to load hdr env map. Half-Float type will loss of precision and have an impression of the effect."
           )
-        : e.data.type !== n.FloatType &&
+        : e.data.type !== THREE.FloatType &&
           console.error(
             `No support environmentLight's data type: ${e.data.type.toString()}`
           ),
-      e.data.type === n.FloatType && e.data.format === n.RGBAFormat)
+      e.data.type === THREE.FloatType && e.data.format === THREE.RGBAFormat)
     ) {
       const a = e.data.image.data,
         n = a.length / 4,
         i = new Float32Array(3 * n);
-      for (let e = 0; e < n; e++)
-        (i[3 * e + 0] = a[4 * e + 0]),
-          (i[3 * e + 1] = a[4 * e + 1]),
-          (i[3 * e + 2] = a[4 * e + 2]);
+
+      for (let e = 0; e < n; e++) {
+        i[3 * e + 0] = a[4 * e + 0];
+        i[3 * e + 1] = a[4 * e + 1];
+        i[3 * e + 2] = a[4 * e + 2];
+      }
+
       t.data = i;
+      console.log(3);
     }
+    console.log(THREE === n);
     return t;
   }
+
   function H(e) {
     const t = e.data,
       a = { width: e.width + 2, height: e.height + 1 },
@@ -1955,7 +2292,7 @@ var __defProp = Object.defineProperty,
             (l[e + 7] = t[e + 7]);
         }
         return { maxDepth: i, count: t.length / 4, buffer: s };
-      })(Y(e));
+      })(bvhAccel(e));
       t(a);
     });
   }
@@ -2042,11 +2379,13 @@ var __defProp = Object.defineProperty,
         loadingCallback: d,
       }),
       p = [];
+
     function m(e) {
       (p.length = 0), (e = clamp(e, 2, 8));
       for (let t = 1; t <= e; t++) p.push(2, 2, 2, 2), t >= 2 && p.push(1);
       u.setUniform("bounces", e), c && (c.strataCount = -1);
     }
+
     function L(t) {
       const { OES_texture_float_linear: a } = r,
         { environment: n, isTextureEnv: i } = t;
@@ -2508,7 +2847,7 @@ var __defProp = Object.defineProperty,
       I = Le(e),
       T = decomposeScene(i, o),
       P = mergeMeshesToGeometry(T.meshes),
-      N = U(e, P.materials),
+      N = makeMaterialBuffer(e, P.materials),
       y = (function (e) {
         const t = e.createVertexArray();
         return (
@@ -2731,7 +3070,7 @@ var __defProp = Object.defineProperty,
             (Z = k.color[0]);
         }
     }
-    function ve(t = !1) {
+    function ve(t = false) {
       const {
         x: a,
         y: n,
@@ -2740,6 +3079,7 @@ var __defProp = Object.defineProperty,
         isFirstTile: r,
         isLastTile: s,
       } = I.nextTile(V);
+      console.log(t);
       r &&
         (0 === w && (re(k), X.setPreviousCamera(S)),
         ie(ee, te, !0),

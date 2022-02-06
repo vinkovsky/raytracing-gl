@@ -91,6 +91,8 @@
             color: new THREE.Color(0.713, 0.8, 0.8),
             transmission: 1,
             roughness: 0.01,
+            emissiveMap: e[16],
+            alpha: 0.1,
             subsurface: 0.3,
             atDistance: 0.4,
           }),
@@ -423,20 +425,20 @@
       }
 
       const envMapPath = "./assets/gray-background-with-dirlight_1k.hdr";
+
       const gltfModelPath = "./assets/diningRoom/scene.gltf";
 
       const renderer = new LGLTracerRenderer({
         canvasAlpha: true,
-        useWorker: true,
       });
-
+      renderer.useWorker = false;
       renderer.bounces = 3;
       renderer.envMapIntensity = 1;
       renderer.enviromentVisible = true;
       renderer.enableDenoise = true;
       renderer.enableTemporalDenoise = true;
       renderer.movingDownsampling = true;
-      renderer.renderWhenOffFocus = true;
+      renderer.renderWhenOffFocus = false;
       renderer.useTileRender = true;
 
       document.body.appendChild(renderer.domElement);
@@ -480,7 +482,9 @@
           rgbeLoader.load(envMapPath, resolve);
         });
 
-        scene.environment = new THREE.Color("black");
+        scene.environment = envMap;
+
+        // scene.environment = new THREE.Color("white");
 
         // const gltfLoader = new THREE.GLTFLoader();
         // const gltfInfo = await new Promise((resolve) => {
@@ -508,14 +512,16 @@
         //         : (t.material = new DisneyMaterial());
         //     }
         //   });
+
+        // scene.add(gltfInfo.scene);
         const radius = 2;
-        const sphereAreaLight = new SphereAreaLight(0xffffff, 1, radius);
+        const sphereAreaLight = new SphereAreaLight(0xeee, 100, radius);
         sphereAreaLight.position.set(0, 5, 0);
         scene.add(sphereAreaLight);
 
         const width = 10;
         const height = 10;
-        const rectAreaLight = new RectAreaLight(0xffffff, 1, width, height);
+        const rectAreaLight = new RectAreaLight(0xeee, 100, width, height);
         rectAreaLight.position.set(10, 12, 0);
         rectAreaLight.target.set(0, 4, 0);
         scene.add(rectAreaLight);

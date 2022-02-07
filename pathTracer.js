@@ -99,14 +99,14 @@ var __defProp = Object.defineProperty,
   //fullscreenQuad.vert
   var fullscreenQuad = {
     source: `
-  layout(location = 0) in vec2 a_position;
+ layout(location = 0) in vec2 a_position;
 
-  out vec2 vCoord;
+ out vec2 vCoord;
 
-  void main() {
-    vCoord = a_position;
-    gl_Position = vec4(2. * a_position - 1., 0, 1);
-  }
+ void main() {
+   vCoord = a_position;
+   gl_Position = vec4(2. * a_position - 1., 0, 1);
+ }
 `,
   };
 
@@ -2218,41 +2218,26 @@ var __defProp = Object.defineProperty,
     };
   }
 
-  function makeStratifiedSamplerCombined(strataCount, listOfDimensions) {
-    const strataObjs = [];
-
-    for (const dim of listOfDimensions) {
-      strataObjs.push(makeStratifiedSampler(strataCount, dim));
-    }
-
-    const combined = [];
-
-    function next() {
-      let i = 0;
-
-      for (const strata of strataObjs) {
-        const nums = strata.next();
-
-        for (const num of nums) {
-          combined[i++] = num;
-        }
-      }
-
-      return combined;
-    }
-
-    function restart() {
-      for (const strata of strataObjs) {
-        strata.restart();
-      }
-    }
-
+  function Z(e, t) {
+    const a = [];
+    for (const i of t) a.push(makeStratifiedSampler(e, i));
+    const n = [];
     return {
-      next,
-      restart,
-      strataCount,
+      next: function () {
+        let e = 0;
+        for (const t of a) {
+          const a = t.next();
+          for (const t of a) n[e++] = t;
+        }
+        return n;
+      },
+      restart: function () {
+        for (const e of a) e.restart();
+      },
+      strataCount: e,
     };
   }
+<<<<<<< HEAD
 
   const bvhUtil =
     "IWZ1bmN0aW9uKCl7InVzZSBzdHJpY3QiO2NsYXNzIHR7Y29uc3RydWN0b3IodD0wLGU9MCxpPTApe3RoaXMueD10LHRoaXMueT1lLHRoaXMuej1pfWxlbmd0aCgpe3JldHVybiBNYXRoLnNxcnQodGhpcy54KnRoaXMueCt0aGlzLnkqdGhpcy55K3RoaXMueip0aGlzLnopfWFkZFZlY3RvcnModCxlKXtyZXR1cm4gdGhpcy54PXQueCtlLngsdGhpcy55PXQueStlLnksdGhpcy56PXQueitlLnosdGhpc31zdWJWZWN0b3JzKHQsZSl7cmV0dXJuIHRoaXMueD10LngtZS54LHRoaXMueT10LnktZS55LHRoaXMuej10LnotZS56LHRoaXN9bXVsdGlwbHlTY2FsYXIodCl7cmV0dXJuIHRoaXMueCo9dCx0aGlzLnkqPXQsdGhpcy56Kj10LHRoaXN9ZGl2aWRlKHQpe3JldHVybiB0aGlzLngvPXQueCx0aGlzLnkvPXQueSx0aGlzLnovPXQueix0aGlzfWRpdmlkZVNjYWxhcih0KXtyZXR1cm4gdGhpcy5tdWx0aXBseVNjYWxhcigxL3QpfW1pbih0KXtyZXR1cm4gdGhpcy54PU1hdGgubWluKHRoaXMueCx0LngpLHRoaXMueT1NYXRoLm1pbih0aGlzLnksdC55KSx0aGlzLno9TWF0aC5taW4odGhpcy56LHQueiksdGhpc31tYXgodCl7cmV0dXJuIHRoaXMueD1NYXRoLm1heCh0aGlzLngsdC54KSx0aGlzLnk9TWF0aC5tYXgodGhpcy55LHQueSksdGhpcy56PU1hdGgubWF4KHRoaXMueix0LnopLHRoaXN9ZG90KHQpe3JldHVybiB0aGlzLngqdC54K3RoaXMueSp0LnkrdGhpcy56KnQuen1ub3JtYWxpemUoKXtyZXR1cm4gdGhpcy5kaXZpZGVTY2FsYXIodGhpcy5sZW5ndGgoKXx8MSl9Y3Jvc3NWZWN0b3JzKHQsZSl7Y29uc3QgaT10Lngsbj10Lnkscj10Lnoscz1lLngsbz1lLnksaD1lLno7cmV0dXJuIHRoaXMueD1uKmgtcipvLHRoaXMueT1yKnMtaSpoLHRoaXMuej1pKm8tbipzLHRoaXN9ZnJvbUJ1ZmZlckF0dHJpYnV0ZSh0LGUsaSl7cmV0dXJuIHZvaWQgMCE9PWkmJmNvbnNvbGUud2FybigiVEhSRUUuVmVjdG9yMzogb2Zmc2V0IGhhcyBiZWVuIHJlbW92ZWQgZnJvbSAuZnJvbUJ1ZmZlckF0dHJpYnV0ZSgpLiIpLHRoaXMueD10LmdldFgoZSksdGhpcy55PXQuZ2V0WShlKSx0aGlzLno9dC5nZXRaKGUpLHRoaXN9fWNsYXNzIGV7Y29uc3RydWN0b3IoZT1uZXcgdCgxLzAsMS8wLDEvMCksaT1uZXcgdCgtMS8wLC0xLzAsLTEvMCkpe3RoaXMubWluPWUsdGhpcy5tYXg9aX1pc0VtcHR5KCl7cmV0dXJuIHRoaXMubWF4Lng8dGhpcy5taW4ueHx8dGhpcy5tYXgueTx0aGlzLm1pbi55fHx0aGlzLm1heC56PHRoaXMubWluLnp9Z2V0Q2VudGVyKHQpe3JldHVybiB0aGlzLmlzRW1wdHkoKT90LnNldCgwLDAsMCk6dC5hZGRWZWN0b3JzKHRoaXMubWluLHRoaXMubWF4KS5tdWx0aXBseVNjYWxhciguNSl9Z2V0U2l6ZSh0KXtyZXR1cm4gdGhpcy5pc0VtcHR5KCk/dC5zZXQoMCwwLDApOnQuc3ViVmVjdG9ycyh0aGlzLm1heCx0aGlzLm1pbil9ZXhwYW5kQnlQb2ludCh0KXtyZXR1cm4gdGhpcy5taW4ubWluKHQpLHRoaXMubWF4Lm1heCh0KSx0aGlzfXVuaW9uKHQpe3JldHVybiB0aGlzLm1pbi5taW4odC5taW4pLHRoaXMubWF4Lm1heCh0Lm1heCksdGhpc319ZnVuY3Rpb24gaSh0LGUsaSl7Y29uc3Qgbj10W2ldO3RbaV09dFtlXSx0W2VdPW59Y29uc3Qgbj1uZXcgdDtmdW5jdGlvbiByKHQsZSl7cmV0dXJue3ByaW1pdGl2ZXM6dCxib3VuZHM6ZX19ZnVuY3Rpb24gcyh0LGUsaSl7bGV0IG49aVtlXS10Lm1pbltlXTtyZXR1cm4gdC5tYXhbZV0+dC5taW5bZV0mJihuLz10Lm1heFtlXS10Lm1pbltlXSksbn1mdW5jdGlvbiBvKHQpe3JldHVybiB0LmdldFNpemUobiksMioobi54Km4ueituLngqbi55K24ueipuLnkpfWZ1bmN0aW9uIGgodCxhLHUpe2NvbnN0IGw9bmV3IGU7Zm9yKGxldCBlPWE7ZTx1O2UrKylsLnVuaW9uKHRbZV0uYm91bmRzKTtjb25zdCBjPXUtYTtpZigxPT09YylyZXR1cm4gcih0LnNsaWNlKGEsdSksbCk7e2NvbnN0IHk9bmV3IGU7Zm9yKGxldCBlPWE7ZTx1O2UrKyl5LmV4cGFuZEJ5UG9pbnQodFtlXS5jZW50ZXIpO2NvbnN0IHo9KHkuZ2V0U2l6ZShuKSxuLng+bi56P24ueD5uLnk/IngiOiJ5IjpuLno+bi55PyJ6IjoieSIpO2xldCBkPU1hdGguZmxvb3IoKGErdSkvMik7aWYoYzw9NCkhZnVuY3Rpb24odCxlLG49MCxyPXQubGVuZ3RoLHM9TWF0aC5mbG9vcigobityKS8yKSl7Zm9yKGxldCBvPW47bzw9cztvKyspe2xldCBuPW8scz10W29dO2ZvcihsZXQgaD1vKzE7aDxyO2grKyllKHMsdFtoXSl8fChuPWgscz10W2hdLGkodCxvLG4pKX19KHQsKCh0LGUpPT50LmNlbnRlclt6XTxlLmNlbnRlclt6XSksYSx1LGQpO2Vsc2V7aWYoeS5tYXhbel09PT15Lm1pblt6XSlyZXR1cm4gcih0LnNsaWNlKGEsdSksbCk7e2NvbnN0IG49MTIscj1bXTtmb3IobGV0IHQ9MDt0PG47dCsrKXIucHVzaCh7Ym91bmRzOm5ldyBlLGNvdW50OjB9KTtmb3IobGV0IGU9YTtlPHU7ZSsrKXtsZXQgaT1NYXRoLmZsb29yKG4qcyh5LHosdFtlXS5jZW50ZXIpKTtpPT09ci5sZW5ndGgmJihpPXIubGVuZ3RoLTEpLHJbaV0uY291bnQrKyxyW2ldLmJvdW5kcy51bmlvbih0W2VdLmJvdW5kcyl9Y29uc3QgaD1bXTtmb3IobGV0IHQ9MDt0PHIubGVuZ3RoLTE7dCsrKXtjb25zdCBpPW5ldyBlLG49bmV3IGU7bGV0IHM9MCxhPTA7Zm9yKGxldCBlPTA7ZTw9dDtlKyspaS51bmlvbihyW2VdLmJvdW5kcykscys9cltlXS5jb3VudDtmb3IobGV0IGU9dCsxO2U8ci5sZW5ndGg7ZSsrKW4udW5pb24ocltlXS5ib3VuZHMpLGErPXJbZV0uY291bnQ7aC5wdXNoKC4xKyhzKm8oaSkrYSpvKG4pKS9vKGwpKX1sZXQgYz1oWzBdLG09MDtmb3IobGV0IHQ9MTt0PGgubGVuZ3RoO3QrKyloW3RdPGMmJihjPWhbdF0sbT10KTtkPWZ1bmN0aW9uKHQsZSxuPTAscj10Lmxlbmd0aCl7Zm9yKDtuIT09cjspe2Zvcig7ZSh0W25dKTspaWYoKytuPT09cilyZXR1cm4gbjtkb3tpZihuPT09LS1yKXJldHVybiBufXdoaWxlKCFlKHRbcl0pKTtpKHQsbixyKSxuKyt9cmV0dXJuIG59KHQsKHQ9PntsZXQgZT1NYXRoLmZsb29yKHIubGVuZ3RoKnMoeSx6LHQuY2VudGVyKSk7cmV0dXJuIGU9PT1yLmxlbmd0aCYmKGU9ci5sZW5ndGgtMSksZTw9bX0pLGEsdSl9fXJldHVybiBtPXoseD1oKHQsYSxkKSxmPWgodCxkLHUpLHtjaGlsZDA6eCxjaGlsZDE6Zixib3VuZHM6KG5ldyBlKS51bmlvbih4LmJvdW5kcykudW5pb24oZi5ib3VuZHMpLHNwbGl0QXhpczptfX12YXIgbSx4LGZ9ZnVuY3Rpb24gYShpKXtjb25zdCBuPWZ1bmN0aW9uKGkpe2NvbnN0IG49W10scj1pLmdldEluZGV4P2kuZ2V0SW5kZXgoKS5hcnJheTppLmluZGV4LmFycmF5LHM9aS5nZXRBdHRyaWJ1dGU/aS5nZXRBdHRyaWJ1dGUoInBvc2l0aW9uIik6aS5hdHRyaWJ1dGVzLnBvc2l0aW9uLG89aS5nZXRBdHRyaWJ1dGU/aS5nZXRBdHRyaWJ1dGUoIm1hdGVyaWFsTWVzaEluZGV4Iik6aS5hdHRyaWJ1dGVzLm1hdGVyaWFsTWVzaEluZGV4LGg9bmV3IHQsYT1uZXcgdCx1PW5ldyB0LGw9bmV3IHQsYz1uZXcgdDtmb3IobGV0IG09MDttPHIubGVuZ3RoO20rPTMpe2NvbnN0IGk9clttXSx4PXJbbSsxXSxmPXJbbSsyXSx5PW5ldyBlO3MuZ2V0WD8oaC5mcm9tQnVmZmVyQXR0cmlidXRlKHMsaSksYS5mcm9tQnVmZmVyQXR0cmlidXRlKHMseCksdS5mcm9tQnVmZmVyQXR0cmlidXRlKHMsZikpOihoLng9cy5hcnJheVtpKnMuaXRlbVNpemVdLGgueT1zLmFycmF5W2kqcy5pdGVtU2l6ZSsxXSxoLno9cy5hcnJheVtpKnMuaXRlbVNpemUrMl0sYS54PXMuYXJyYXlbeCpzLml0ZW1TaXplXSxhLnk9cy5hcnJheVt4KnMuaXRlbVNpemUrMV0sYS56PXMuYXJyYXlbeCpzLml0ZW1TaXplKzJdLHUueD1zLmFycmF5W2Yqcy5pdGVtU2l6ZV0sdS55PXMuYXJyYXlbZipzLml0ZW1TaXplKzFdLHUuej1zLmFycmF5W2Yqcy5pdGVtU2l6ZSsyXSkseS5leHBhbmRCeVBvaW50KGgpLHkuZXhwYW5kQnlQb2ludChhKSx5LmV4cGFuZEJ5UG9pbnQodSksbC5zdWJWZWN0b3JzKHUsaCksYy5zdWJWZWN0b3JzKGEsaCk7Y29uc3Qgej0obmV3IHQpLmNyb3NzVmVjdG9ycyhjLGwpLm5vcm1hbGl6ZSgpLGQ9e2JvdW5kczp5LGNlbnRlcjp5LmdldENlbnRlcihuZXcgdCksaW5kaWNlczpbaSx4LGZdLGZhY2VOb3JtYWw6eixtYXRlcmlhbEluZGV4Om8uZ2V0WD9vLmdldFgoaSk6by5hcnJheVtpKm8uaXRlbVNpemVdfTtuLnB1c2goZCl9cmV0dXJuIG59KGkpO3JldHVybiBoKG4sMCxuLmxlbmd0aCl9c2VsZi5vbm1lc3NhZ2U9ZnVuY3Rpb24oe2RhdGE6dH0pe2NvbnN0e2dlb21ldHJ5OmV9PXQ7dHJ5e2NvbnN0IHQ9ZnVuY3Rpb24odCl7Y29uc3QgZT1bXSxpPVtdLG49e3g6MCx5OjEsejoyfTtsZXQgcj0xO2NvbnN0IHM9KHQsbz0xKT0+e2lmKHI9TWF0aC5tYXgobyxyKSx0LnByaW1pdGl2ZXMpZm9yKGxldCBuPTA7bjx0LnByaW1pdGl2ZXMubGVuZ3RoO24rKyl7Y29uc3Qgcj10LnByaW1pdGl2ZXNbbl07ZS5wdXNoKHIuaW5kaWNlc1swXSxyLmluZGljZXNbMV0sci5pbmRpY2VzWzJdLHQucHJpbWl0aXZlcy5sZW5ndGgsci5mYWNlTm9ybWFsLngsci5mYWNlTm9ybWFsLnksci5mYWNlTm9ybWFsLnosci5tYXRlcmlhbEluZGV4KSxpLnB1c2goITEpfWVsc2V7Y29uc3Qgcj10LmJvdW5kcztlLnB1c2goci5taW4ueCxyLm1pbi55LHIubWluLnosblt0LnNwbGl0QXhpc10sci5tYXgueCxyLm1heC55LHIubWF4LnosbnVsbCk7Y29uc3QgaD1lLmxlbmd0aC0xO2kucHVzaCghMCkscyh0LmNoaWxkMCxvKzEpLGVbaF09ZS5sZW5ndGgvNCxzKHQuY2hpbGQxLG8rMSl9fTtzKHQpO2NvbnN0IG89bmV3IEFycmF5QnVmZmVyKDQqZS5sZW5ndGgpLGg9bmV3IEZsb2F0MzJBcnJheShvKSxhPW5ldyBJbnQzMkFycmF5KG8pO2ZvcihsZXQgdT0wO3U8aS5sZW5ndGg7dSsrKXtsZXQgdD04KnU7aVt1XT8oaFt0XT1lW3RdLGhbdCsxXT1lW3QrMV0saFt0KzJdPWVbdCsyXSxhW3QrM109ZVt0KzNdKTooYVt0XT1lW3RdLGFbdCsxXT1lW3QrMV0sYVt0KzJdPWVbdCsyXSxhW3QrM109LWVbdCszXSksaFt0KzRdPWVbdCs0XSxoW3QrNV09ZVt0KzVdLGhbdCs2XT1lW3QrNl0sYVt0KzddPWVbdCs3XX1yZXR1cm57bWF4RGVwdGg6cixjb3VudDplLmxlbmd0aC80LGJ1ZmZlcjpofX0oYShlKSk7c2VsZi5wb3N0TWVzc2FnZSh7ZXJyb3I6bnVsbCxmbGF0dGVuZWRCdmg6dH0pfWNhdGNoKGkpe3NlbGYucG9zdE1lc3NhZ2Uoe2Vycm9yOmksZmxhdHRlbmVkQnZoOm51bGx9KX19fSgpOwo=";
@@ -2266,6 +2251,16 @@ var __defProp = Object.defineProperty,
     const objectUrl =
       blob && (window.URL || window.webkitURL).createObjectURL(blob);
 
+=======
+  const K =
+      "IWZ1bmN0aW9uKCl7InVzZSBzdHJpY3QiO2NsYXNzIHR7Y29uc3RydWN0b3IodD0wLGU9MCxpPTApe3RoaXMueD10LHRoaXMueT1lLHRoaXMuej1pfWxlbmd0aCgpe3JldHVybiBNYXRoLnNxcnQodGhpcy54KnRoaXMueCt0aGlzLnkqdGhpcy55K3RoaXMueip0aGlzLnopfWFkZFZlY3RvcnModCxlKXtyZXR1cm4gdGhpcy54PXQueCtlLngsdGhpcy55PXQueStlLnksdGhpcy56PXQueitlLnosdGhpc31zdWJWZWN0b3JzKHQsZSl7cmV0dXJuIHRoaXMueD10LngtZS54LHRoaXMueT10LnktZS55LHRoaXMuej10LnotZS56LHRoaXN9bXVsdGlwbHlTY2FsYXIodCl7cmV0dXJuIHRoaXMueCo9dCx0aGlzLnkqPXQsdGhpcy56Kj10LHRoaXN9ZGl2aWRlKHQpe3JldHVybiB0aGlzLngvPXQueCx0aGlzLnkvPXQueSx0aGlzLnovPXQueix0aGlzfWRpdmlkZVNjYWxhcih0KXtyZXR1cm4gdGhpcy5tdWx0aXBseVNjYWxhcigxL3QpfW1pbih0KXtyZXR1cm4gdGhpcy54PU1hdGgubWluKHRoaXMueCx0LngpLHRoaXMueT1NYXRoLm1pbih0aGlzLnksdC55KSx0aGlzLno9TWF0aC5taW4odGhpcy56LHQueiksdGhpc31tYXgodCl7cmV0dXJuIHRoaXMueD1NYXRoLm1heCh0aGlzLngsdC54KSx0aGlzLnk9TWF0aC5tYXgodGhpcy55LHQueSksdGhpcy56PU1hdGgubWF4KHRoaXMueix0LnopLHRoaXN9ZG90KHQpe3JldHVybiB0aGlzLngqdC54K3RoaXMueSp0LnkrdGhpcy56KnQuen1ub3JtYWxpemUoKXtyZXR1cm4gdGhpcy5kaXZpZGVTY2FsYXIodGhpcy5sZW5ndGgoKXx8MSl9Y3Jvc3NWZWN0b3JzKHQsZSl7Y29uc3QgaT10Lngsbj10Lnkscj10Lnoscz1lLngsbz1lLnksaD1lLno7cmV0dXJuIHRoaXMueD1uKmgtcipvLHRoaXMueT1yKnMtaSpoLHRoaXMuej1pKm8tbipzLHRoaXN9ZnJvbUJ1ZmZlckF0dHJpYnV0ZSh0LGUsaSl7cmV0dXJuIHZvaWQgMCE9PWkmJmNvbnNvbGUud2FybigiVEhSRUUuVmVjdG9yMzogb2Zmc2V0IGhhcyBiZWVuIHJlbW92ZWQgZnJvbSAuZnJvbUJ1ZmZlckF0dHJpYnV0ZSgpLiIpLHRoaXMueD10LmdldFgoZSksdGhpcy55PXQuZ2V0WShlKSx0aGlzLno9dC5nZXRaKGUpLHRoaXN9fWNsYXNzIGV7Y29uc3RydWN0b3IoZT1uZXcgdCgxLzAsMS8wLDEvMCksaT1uZXcgdCgtMS8wLC0xLzAsLTEvMCkpe3RoaXMubWluPWUsdGhpcy5tYXg9aX1pc0VtcHR5KCl7cmV0dXJuIHRoaXMubWF4Lng8dGhpcy5taW4ueHx8dGhpcy5tYXgueTx0aGlzLm1pbi55fHx0aGlzLm1heC56PHRoaXMubWluLnp9Z2V0Q2VudGVyKHQpe3JldHVybiB0aGlzLmlzRW1wdHkoKT90LnNldCgwLDAsMCk6dC5hZGRWZWN0b3JzKHRoaXMubWluLHRoaXMubWF4KS5tdWx0aXBseVNjYWxhciguNSl9Z2V0U2l6ZSh0KXtyZXR1cm4gdGhpcy5pc0VtcHR5KCk/dC5zZXQoMCwwLDApOnQuc3ViVmVjdG9ycyh0aGlzLm1heCx0aGlzLm1pbil9ZXhwYW5kQnlQb2ludCh0KXtyZXR1cm4gdGhpcy5taW4ubWluKHQpLHRoaXMubWF4Lm1heCh0KSx0aGlzfXVuaW9uKHQpe3JldHVybiB0aGlzLm1pbi5taW4odC5taW4pLHRoaXMubWF4Lm1heCh0Lm1heCksdGhpc319ZnVuY3Rpb24gaSh0LGUsaSl7Y29uc3Qgbj10W2ldO3RbaV09dFtlXSx0W2VdPW59Y29uc3Qgbj1uZXcgdDtmdW5jdGlvbiByKHQsZSl7cmV0dXJue3ByaW1pdGl2ZXM6dCxib3VuZHM6ZX19ZnVuY3Rpb24gcyh0LGUsaSl7bGV0IG49aVtlXS10Lm1pbltlXTtyZXR1cm4gdC5tYXhbZV0+dC5taW5bZV0mJihuLz10Lm1heFtlXS10Lm1pbltlXSksbn1mdW5jdGlvbiBvKHQpe3JldHVybiB0LmdldFNpemUobiksMioobi54Km4ueituLngqbi55K24ueipuLnkpfWZ1bmN0aW9uIGgodCxhLHUpe2NvbnN0IGw9bmV3IGU7Zm9yKGxldCBlPWE7ZTx1O2UrKylsLnVuaW9uKHRbZV0uYm91bmRzKTtjb25zdCBjPXUtYTtpZigxPT09YylyZXR1cm4gcih0LnNsaWNlKGEsdSksbCk7e2NvbnN0IHk9bmV3IGU7Zm9yKGxldCBlPWE7ZTx1O2UrKyl5LmV4cGFuZEJ5UG9pbnQodFtlXS5jZW50ZXIpO2NvbnN0IHo9KHkuZ2V0U2l6ZShuKSxuLng+bi56P24ueD5uLnk/IngiOiJ5IjpuLno+bi55PyJ6IjoieSIpO2xldCBkPU1hdGguZmxvb3IoKGErdSkvMik7aWYoYzw9NCkhZnVuY3Rpb24odCxlLG49MCxyPXQubGVuZ3RoLHM9TWF0aC5mbG9vcigobityKS8yKSl7Zm9yKGxldCBvPW47bzw9cztvKyspe2xldCBuPW8scz10W29dO2ZvcihsZXQgaD1vKzE7aDxyO2grKyllKHMsdFtoXSl8fChuPWgscz10W2hdLGkodCxvLG4pKX19KHQsKCh0LGUpPT50LmNlbnRlclt6XTxlLmNlbnRlclt6XSksYSx1LGQpO2Vsc2V7aWYoeS5tYXhbel09PT15Lm1pblt6XSlyZXR1cm4gcih0LnNsaWNlKGEsdSksbCk7e2NvbnN0IG49MTIscj1bXTtmb3IobGV0IHQ9MDt0PG47dCsrKXIucHVzaCh7Ym91bmRzOm5ldyBlLGNvdW50OjB9KTtmb3IobGV0IGU9YTtlPHU7ZSsrKXtsZXQgaT1NYXRoLmZsb29yKG4qcyh5LHosdFtlXS5jZW50ZXIpKTtpPT09ci5sZW5ndGgmJihpPXIubGVuZ3RoLTEpLHJbaV0uY291bnQrKyxyW2ldLmJvdW5kcy51bmlvbih0W2VdLmJvdW5kcyl9Y29uc3QgaD1bXTtmb3IobGV0IHQ9MDt0PHIubGVuZ3RoLTE7dCsrKXtjb25zdCBpPW5ldyBlLG49bmV3IGU7bGV0IHM9MCxhPTA7Zm9yKGxldCBlPTA7ZTw9dDtlKyspaS51bmlvbihyW2VdLmJvdW5kcykscys9cltlXS5jb3VudDtmb3IobGV0IGU9dCsxO2U8ci5sZW5ndGg7ZSsrKW4udW5pb24ocltlXS5ib3VuZHMpLGErPXJbZV0uY291bnQ7aC5wdXNoKC4xKyhzKm8oaSkrYSpvKG4pKS9vKGwpKX1sZXQgYz1oWzBdLG09MDtmb3IobGV0IHQ9MTt0PGgubGVuZ3RoO3QrKyloW3RdPGMmJihjPWhbdF0sbT10KTtkPWZ1bmN0aW9uKHQsZSxuPTAscj10Lmxlbmd0aCl7Zm9yKDtuIT09cjspe2Zvcig7ZSh0W25dKTspaWYoKytuPT09cilyZXR1cm4gbjtkb3tpZihuPT09LS1yKXJldHVybiBufXdoaWxlKCFlKHRbcl0pKTtpKHQsbixyKSxuKyt9cmV0dXJuIG59KHQsKHQ9PntsZXQgZT1NYXRoLmZsb29yKHIubGVuZ3RoKnMoeSx6LHQuY2VudGVyKSk7cmV0dXJuIGU9PT1yLmxlbmd0aCYmKGU9ci5sZW5ndGgtMSksZTw9bX0pLGEsdSl9fXJldHVybiBtPXoseD1oKHQsYSxkKSxmPWgodCxkLHUpLHtjaGlsZDA6eCxjaGlsZDE6Zixib3VuZHM6KG5ldyBlKS51bmlvbih4LmJvdW5kcykudW5pb24oZi5ib3VuZHMpLHNwbGl0QXhpczptfX12YXIgbSx4LGZ9ZnVuY3Rpb24gYShpKXtjb25zdCBuPWZ1bmN0aW9uKGkpe2NvbnN0IG49W10scj1pLmdldEluZGV4P2kuZ2V0SW5kZXgoKS5hcnJheTppLmluZGV4LmFycmF5LHM9aS5nZXRBdHRyaWJ1dGU/aS5nZXRBdHRyaWJ1dGUoInBvc2l0aW9uIik6aS5hdHRyaWJ1dGVzLnBvc2l0aW9uLG89aS5nZXRBdHRyaWJ1dGU/aS5nZXRBdHRyaWJ1dGUoIm1hdGVyaWFsTWVzaEluZGV4Iik6aS5hdHRyaWJ1dGVzLm1hdGVyaWFsTWVzaEluZGV4LGg9bmV3IHQsYT1uZXcgdCx1PW5ldyB0LGw9bmV3IHQsYz1uZXcgdDtmb3IobGV0IG09MDttPHIubGVuZ3RoO20rPTMpe2NvbnN0IGk9clttXSx4PXJbbSsxXSxmPXJbbSsyXSx5PW5ldyBlO3MuZ2V0WD8oaC5mcm9tQnVmZmVyQXR0cmlidXRlKHMsaSksYS5mcm9tQnVmZmVyQXR0cmlidXRlKHMseCksdS5mcm9tQnVmZmVyQXR0cmlidXRlKHMsZikpOihoLng9cy5hcnJheVtpKnMuaXRlbVNpemVdLGgueT1zLmFycmF5W2kqcy5pdGVtU2l6ZSsxXSxoLno9cy5hcnJheVtpKnMuaXRlbVNpemUrMl0sYS54PXMuYXJyYXlbeCpzLml0ZW1TaXplXSxhLnk9cy5hcnJheVt4KnMuaXRlbVNpemUrMV0sYS56PXMuYXJyYXlbeCpzLml0ZW1TaXplKzJdLHUueD1zLmFycmF5W2Yqcy5pdGVtU2l6ZV0sdS55PXMuYXJyYXlbZipzLml0ZW1TaXplKzFdLHUuej1zLmFycmF5W2Yqcy5pdGVtU2l6ZSsyXSkseS5leHBhbmRCeVBvaW50KGgpLHkuZXhwYW5kQnlQb2ludChhKSx5LmV4cGFuZEJ5UG9pbnQodSksbC5zdWJWZWN0b3JzKHUsaCksYy5zdWJWZWN0b3JzKGEsaCk7Y29uc3Qgej0obmV3IHQpLmNyb3NzVmVjdG9ycyhjLGwpLm5vcm1hbGl6ZSgpLGQ9e2JvdW5kczp5LGNlbnRlcjp5LmdldENlbnRlcihuZXcgdCksaW5kaWNlczpbaSx4LGZdLGZhY2VOb3JtYWw6eixtYXRlcmlhbEluZGV4Om8uZ2V0WD9vLmdldFgoaSk6by5hcnJheVtpKm8uaXRlbVNpemVdfTtuLnB1c2goZCl9cmV0dXJuIG59KGkpO3JldHVybiBoKG4sMCxuLmxlbmd0aCl9c2VsZi5vbm1lc3NhZ2U9ZnVuY3Rpb24oe2RhdGE6dH0pe2NvbnN0e2dlb21ldHJ5OmV9PXQ7dHJ5e2NvbnN0IHQ9ZnVuY3Rpb24odCl7Y29uc3QgZT1bXSxpPVtdLG49e3g6MCx5OjEsejoyfTtsZXQgcj0xO2NvbnN0IHM9KHQsbz0xKT0+e2lmKHI9TWF0aC5tYXgobyxyKSx0LnByaW1pdGl2ZXMpZm9yKGxldCBuPTA7bjx0LnByaW1pdGl2ZXMubGVuZ3RoO24rKyl7Y29uc3Qgcj10LnByaW1pdGl2ZXNbbl07ZS5wdXNoKHIuaW5kaWNlc1swXSxyLmluZGljZXNbMV0sci5pbmRpY2VzWzJdLHQucHJpbWl0aXZlcy5sZW5ndGgsci5mYWNlTm9ybWFsLngsci5mYWNlTm9ybWFsLnksci5mYWNlTm9ybWFsLnosci5tYXRlcmlhbEluZGV4KSxpLnB1c2goITEpfWVsc2V7Y29uc3Qgcj10LmJvdW5kcztlLnB1c2goci5taW4ueCxyLm1pbi55LHIubWluLnosblt0LnNwbGl0QXhpc10sci5tYXgueCxyLm1heC55LHIubWF4LnosbnVsbCk7Y29uc3QgaD1lLmxlbmd0aC0xO2kucHVzaCghMCkscyh0LmNoaWxkMCxvKzEpLGVbaF09ZS5sZW5ndGgvNCxzKHQuY2hpbGQxLG8rMSl9fTtzKHQpO2NvbnN0IG89bmV3IEFycmF5QnVmZmVyKDQqZS5sZW5ndGgpLGg9bmV3IEZsb2F0MzJBcnJheShvKSxhPW5ldyBJbnQzMkFycmF5KG8pO2ZvcihsZXQgdT0wO3U8aS5sZW5ndGg7dSsrKXtsZXQgdD04KnU7aVt1XT8oaFt0XT1lW3RdLGhbdCsxXT1lW3QrMV0saFt0KzJdPWVbdCsyXSxhW3QrM109ZVt0KzNdKTooYVt0XT1lW3RdLGFbdCsxXT1lW3QrMV0sYVt0KzJdPWVbdCsyXSxhW3QrM109LWVbdCszXSksaFt0KzRdPWVbdCs0XSxoW3QrNV09ZVt0KzVdLGhbdCs2XT1lW3QrNl0sYVt0KzddPWVbdCs3XX1yZXR1cm57bWF4RGVwdGg6cixjb3VudDplLmxlbmd0aC80LGJ1ZmZlcjpofX0oYShlKSk7c2VsZi5wb3N0TWVzc2FnZSh7ZXJyb3I6bnVsbCxmbGF0dGVuZWRCdmg6dH0pfWNhdGNoKGkpe3NlbGYucG9zdE1lc3NhZ2Uoe2Vycm9yOmksZmxhdHRlbmVkQnZoOm51bGx9KX19fSgpOwo=",
+    q =
+      "undefined" != typeof window &&
+      window.Blob &&
+      new Blob([atob(K)], { type: "text/javascript;charset=utf-8" });
+  function J() {
+    const e = q && (window.URL || window.webkitURL).createObjectURL(q);
+>>>>>>> parent of 3cb4ad1 (add webworker)
     try {
       return objectUrl
         ? new Worker(objectUrl)
@@ -2276,6 +2271,7 @@ var __defProp = Object.defineProperty,
       objectUrl && (window.URL || window.webkitURL).revokeObjectURL(objectUrl);
     }
   }
+<<<<<<< HEAD
 
   class BVHWorker {
     constructor() {
@@ -2306,41 +2302,54 @@ var __defProp = Object.defineProperty,
         };
 
         this.worker.postMessage({ geometry });
+=======
+  class j {
+    constructor() {
+      (this.worker = new J()), (this.building = !1);
+    }
+    build(e) {
+      if (this.building) throw new Error("BVHWorker is building");
+      this.building = !0;
+      const { worker: t } = this;
+      return new Promise((a, n) => {
+        (t.onmessage = (e) => {
+          (this.building = !1), (t.onmessage = null);
+          const { flattenedBvh: i, error: o } = e.data;
+          o ? n(new Error(o)) : a(i);
+        }),
+          t.postMessage({ geometry: e });
+>>>>>>> parent of 3cb4ad1 (add webworker)
       });
     }
   }
-
-  function textureDimensionsFromArray(count) {
-    const columnsLog = Math.round(Math.log2(Math.sqrt(count)));
-    const columns = 2 ** columnsLog;
-    const rows = Math.ceil(count / columns);
-    return {
-      columnsLog,
-      columns,
-      rows,
-      size: rows * columns,
-    };
+  function $(e) {
+    const t = Math.round(Math.log2(Math.sqrt(e))),
+      a = 2 ** t,
+      n = Math.ceil(e / a);
+    return { columnsLog: t, columns: a, rows: n, size: n * a };
   }
-
-  function makeDataTexture(gl, dataArray, channels) {
-    const textureDim = textureDimensionsFromArray(dataArray.length / channels);
-    return makeTexture(gl, {
-      data: padArray(dataArray, channels * textureDim.size),
-      width: textureDim.columns,
-      height: textureDim.rows,
+  function ee(e, t, a) {
+    const n = $(t.length / a);
+    return makeTexture(e, {
+      data: te(t, a * n.size),
+      width: n.columns,
+      height: n.rows,
     });
   }
-
-  // expand array to the given length
-  function padArray(typedArray, length) {
-    const newArray = new typedArray.constructor(length);
-    newArray.set(typedArray);
-    return newArray;
+  function te(e, t) {
+    const a = new e.constructor(t);
+    return a.set(e), a;
   }
+<<<<<<< HEAD
 
   function createBvh(geometry, useWorker = true) {
     if (useWorker && window.Worker) {
       return new BVHWorker().build(geometry);
+=======
+  function ae(e, t = !0) {
+    if (t && window.Worker) {
+      return new j().build(e);
+>>>>>>> parent of 3cb4ad1 (add webworker)
     }
 
     return new Promise((resolve) => {
@@ -2458,11 +2467,9 @@ var __defProp = Object.defineProperty,
             defines: __spreadValues(
               {
                 OES_texture_float_linear: l,
-                BVH_COLUMNS: textureDimensionsFromArray(m.count).columnsLog,
-                INDEX_COLUMNS: textureDimensionsFromArray(L).columnsLog,
-                VERTEX_COLUMNS: textureDimensionsFromArray(
-                  u.attributes.position.count
-                ).columnsLog,
+                BVH_COLUMNS: $(m.count).columnsLog,
+                INDEX_COLUMNS: $(L).columnsLog,
+                VERTEX_COLUMNS: $(u.attributes.position.count).columnsLog,
                 STACK_SIZE: m.maxDepth,
                 USE_LENS_CAMERA: f.isLensCamera,
                 NUM_LIGHTS: d,
@@ -2482,17 +2489,14 @@ var __defProp = Object.defineProperty,
             x.setTexture("emissiveMap", n.textures.emissiveMap),
           x.setTexture(
             "positionBuffer",
-            makeDataTexture(a, u.getAttribute("position").array, 3)
+            ee(a, u.getAttribute("position").array, 3)
           ),
           x.setTexture(
             "normalBuffer",
-            makeDataTexture(a, u.getAttribute("normal").array, 3)
+            ee(a, u.getAttribute("normal").array, 3)
           ),
-          x.setTexture(
-            "uvBuffer",
-            makeDataTexture(a, u.getAttribute("uv").array, 2)
-          ),
-          x.setTexture("bvhBuffer", makeDataTexture(a, m.buffer, 4)),
+          x.setTexture("uvBuffer", ee(a, u.getAttribute("uv").array, 2)),
+          x.setTexture("bvhBuffer", ee(a, m.buffer, 4)),
           x
         );
       })({
@@ -2576,7 +2580,7 @@ var __defProp = Object.defineProperty,
       m(t),
       L(a),
       x(a),
-      (c = makeStratifiedSamplerCombined(1, p)),
+      (c = Z(1, p)),
       {
         bindTextures: function () {
           u.bindTextures();
@@ -2621,9 +2625,7 @@ var __defProp = Object.defineProperty,
           u.setUniform("frameCount", e);
         },
         setStrataCount: function (e) {
-          e > 1 && e !== c.strataCount
-            ? (c = makeStratifiedSamplerCombined(e, p))
-            : c.restart(),
+          e > 1 && e !== c.strataCount ? (c = Z(e, p)) : c.restart(),
             u.setUniform("strataSize", 1 / e),
             g();
         },

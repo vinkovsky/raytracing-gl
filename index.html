@@ -8,6 +8,7 @@
     <script src="https://unpkg.com/three@0.136.0/build/three.js"></script>
     <script src="https://unpkg.com/three@0.136.0/examples/js/loaders/GLTFLoader.js"></script>
     <script src="https://unpkg.com/three@0.136.0/examples/js/loaders/RGBELoader.js"></script>
+    <script src="https://unpkg.com/three@0.136.0/examples/js/loaders/EXRLoader.js"></script>
 
     <!-- <script src="https://unpkg.com/three@0.136.0/examples/js/loaders/TextureLoader.js"></script> -->
     <script src="https://unpkg.com/three@0.136.0/examples/js/controls/OrbitControls.js"></script>
@@ -425,6 +426,8 @@
       }
 
       const envMapPath = "./assets/gray-background-with-dirlight_1k.hdr";
+      const envMapPath2 = "./assets/book1.jpg";
+      const envMapPath3 = "./assets/piz_compressed.exr";
 
       const gltfModelPath = "./assets/diningRoom/scene.gltf";
 
@@ -461,6 +464,7 @@
         45,
         window.innerWidth / window.innerHeight
       );
+
       camera.position.set(
         -1.4141610975212875,
         -0.5500411049703974,
@@ -482,8 +486,17 @@
           rgbeLoader.load(envMapPath, resolve);
         });
 
-        scene.environment = envMap;
+        const rgbeLoader2 = new THREE.TextureLoader();
+        const envMap2 = await new Promise((resolve) => {
+          rgbeLoader2.load(envMapPath2, resolve);
+        });
 
+        const rgbeLoader3 = new THREE.EXRLoader().setDataType(THREE.FloatType);
+        const envMap3 = await new Promise((resolve) => {
+          rgbeLoader3.load(envMapPath3, resolve);
+        });
+        scene.environment = envMap2;
+        console.log("focus" in camera);
         // scene.environment = new THREE.Color("white");
 
         // const gltfLoader = new THREE.GLTFLoader();

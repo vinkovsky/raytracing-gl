@@ -434,6 +434,7 @@
       const renderer = new LGLTracerRenderer({
         canvasAlpha: true,
       });
+
       renderer.useWorker = true;
       renderer.bounces = 3;
       renderer.envMapIntensity = 1;
@@ -495,50 +496,51 @@
         const envMap3 = await new Promise((resolve) => {
           rgbeLoader3.load(envMapPath3, resolve);
         });
-        scene.environment = envMap2;
-        console.log("focus" in camera);
+
+        scene.environment = envMap;
+
         // scene.environment = new THREE.Color("white");
 
-        // const gltfLoader = new THREE.GLTFLoader();
-        // const gltfInfo = await new Promise((resolve) => {
-        //   gltfLoader.load(gltfModelPath, resolve);
-        // });
-        // const i = await oe();
-        // gltfInfo.scene.traverse((t) => {
-        //   t.isMesh &&
-        //     i.forEach((l) => {
-        //       const r = l.meshName,
-        //         m = l.material;
-        //       if (~r.indexOf(t.name)) {
-        //         m ? (t.material = m) : (t.visible = !1);
-        //         return;
-        //       }
-        //     });
-        // }),
-        //   gltfInfo.scene.traverse((t) => {
-        //     if (t.isMesh && t.material) {
-        //       if (t.material.isRayTracingMaterial) return;
-        //       t.material.isMeshStandardMaterial
-        //         ? (t.material = new DisneyMaterial().fromStandardMaterial(
-        //             t.material
-        //           ))
-        //         : (t.material = new DisneyMaterial());
-        //     }
-        //   });
+        const gltfLoader = new THREE.GLTFLoader();
+        const gltfInfo = await new Promise((resolve) => {
+          gltfLoader.load(gltfModelPath, resolve);
+        });
+        const i = await oe();
+        gltfInfo.scene.traverse((t) => {
+          t.isMesh &&
+            i.forEach((l) => {
+              const r = l.meshName,
+                m = l.material;
+              if (~r.indexOf(t.name)) {
+                m ? (t.material = m) : (t.visible = !1);
+                return;
+              }
+            });
+        }),
+          gltfInfo.scene.traverse((t) => {
+            if (t.isMesh && t.material) {
+              if (t.material.isRayTracingMaterial) return;
+              t.material.isMeshStandardMaterial
+                ? (t.material = new DisneyMaterial().fromStandardMaterial(
+                    t.material
+                  ))
+                : (t.material = new DisneyMaterial());
+            }
+          });
 
-        // scene.add(gltfInfo.scene);
+        scene.add(gltfInfo.scene);
         const radius = 2;
         const sphereAreaLight = new SphereAreaLight(0xeee, 100, radius);
         sphereAreaLight.position.set(0, 5, 0);
         scene.add(sphereAreaLight);
-
+        sphereAreaLight.visible = false;
         const width = 10;
         const height = 10;
         const rectAreaLight = new RectAreaLight(0xeee, 100, width, height);
         rectAreaLight.position.set(10, 12, 0);
         rectAreaLight.target.set(0, 4, 0);
         scene.add(rectAreaLight);
-
+        rectAreaLight.visible = false;
         const quad = new QuadLight();
         quad.color = new THREE.Color("white");
         quad.v1 = new THREE.Vector3(1, 1, 1);

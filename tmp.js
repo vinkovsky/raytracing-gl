@@ -99,14 +99,14 @@ var __defProp = Object.defineProperty,
   //fullscreenQuad.vert
   var fullscreenQuad = {
     source: `
- layout(location = 0) in vec2 a_position;
+  layout(location = 0) in vec2 a_position;
 
- out vec2 vCoord;
+  out vec2 vCoord;
 
- void main() {
-   vCoord = a_position;
-   gl_Position = vec4(2. * a_position - 1., 0, 1);
- }
+  void main() {
+    vCoord = a_position;
+    gl_Position = vec4(2. * a_position - 1., 0, 1);
+  }
 `,
   };
 
@@ -2103,7 +2103,7 @@ var __defProp = Object.defineProperty,
     return backgroundImage;
   }
 
-  function makeEnvTextureArray(width, height, channels) {
+  function makeTextureArray(width, height, channels) {
     const array = new Float32Array(channels * width * height);
 
     return {
@@ -2124,7 +2124,7 @@ var __defProp = Object.defineProperty,
     const data = image.data;
     const cdfImage = { width: image.width + 2, height: image.height + 1 };
 
-    const cdf = makeEnvTextureArray(cdfImage.width, cdfImage.height, 2);
+    const cdf = makeTextureArray(cdfImage.width, cdfImage.height, 2);
 
     for (let y = 0; y < image.height; y++) {
       const sinTheta = Math.sin((Math.PI * (y + 0.5)) / image.height);

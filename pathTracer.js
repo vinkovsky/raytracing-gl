@@ -2507,30 +2507,30 @@ var __defProp = Object.defineProperty,
   }
 
   async function makeRayTracePass(
-    e,
+    gl,
     {
-      bounces: t, // number of global illumination bounces
-      decomposedScene: a,
-      fullscreenQuad: n,
-      materialBuffer: i,
-      mergedMesh: o,
-      optionalExtensions: r,
-      envMapIntensity: s,
+      bounces, // number of global illumination bounces
+      decomposedScene,
+      fullscreenQuad,
+      materialBuffer,
+      mergedMesh,
+      optionalExtensions,
+      envMapIntensity,
       enviromentVisible,
-      useWorker: f,
-      loadingCallback: d,
+      useWorker,
+      loadingCallback,
     }
   ) {
     const renderPass = await makeRenderPassFromScene({
-      bounces: t,
-      decomposedScene: a,
-      fullscreenQuad: n,
-      gl: e,
-      materialBuffer: i,
-      mergedMesh: o,
-      optionalExtensions: r,
-      useWorker: f,
-      loadingCallback: d,
+      bounces,
+      decomposedScene,
+      fullscreenQuad,
+      gl,
+      materialBuffer,
+      mergedMesh,
+      optionalExtensions,
+      useWorker,
+      loadingCallback,
     });
 
     const samplingDimensions = [];
@@ -2558,58 +2558,63 @@ var __defProp = Object.defineProperty,
     }
 
     function updateEnvLight(decomposedScene) {
-      const { OES_texture_float_linear } = r;
+      const { OES_texture_float_linear } = optionalExtensions;
       const { environment, isTextureEnv } = decomposedScene;
 
       if (isTextureEnv) {
-        const t = (function (environment) {
-          let t;
-          return (
-            environment && environment.data && environment.data.isTexture
-              ? (t = generateBackgroundMapFromSceneBackground(environment))
-              : console.warn(
-                  `No support environment type: ${environment.data}`
-                ),
-            t
-          );
-        })(environment);
+        let envImage;
 
-        if (t) {
-          const n = makeTexture(e, {
-            data: t.data,
-            storage: t.dataFormat,
-            minFilter: OES_texture_float_linear ? e.LINEAR : e.NEAREST,
-            magFilter: OES_texture_float_linear ? e.LINEAR : e.NEAREST,
-            width: t.width,
-            height: t.height,
+        if (environment.data?.isTexture) {
+          envImage = generateBackgroundMapFromSceneBackground(environment);
+        } else {
+          console.warn(`No support environment type: ${environment.data}`);
+        }
+
+        if (envImage) {
+          const envImageTextureObject = makeTexture(gl, {
+            data: envImage.data,
+            storage: envImage.dataFormat,
+            minFilter: OES_texture_float_linear ? gl.LINEAR : gl.NEAREST,
+            magFilter: OES_texture_float_linear ? gl.LINEAR : gl.NEAREST,
+            width: envImage.width,
+            height: envImage.height,
           });
 
-          renderPass.setTexture("envMap", n);
+          renderPass.setTexture("envMap", envImageTextureObject);
 
-          const i = envMapDistribution(t);
+          const distribution = envMapDistribution(envImage);
 
           renderPass.setTexture(
             "envMapDistribution",
-            makeTexture(e, {
-              data: i.data,
+            makeTexture(gl, {
+              data: distribution.data,
               storage: "float",
-              width: i.width,
-              height: i.height,
+              width: distribution.width,
+              height: distribution.height,
             })
           );
-          renderPass.setUniform("envMapIntensity", s);
+          renderPass.setUniform("envMapIntensity", envMapIntensity);
         }
       } else {
-        const e = environment.data;
-        e && e.isColor
-          ? renderPass.setUniform("backgroundColor", [e.r, e.g, e.b])
-          : renderPass.setUniform("backgroundColor", [0, 0, 0]);
+        const backgroundColor = environment.data;
+
+        if (backgroundColor && backgroundColor.isColor) {
+          renderPass.setUniform("backgroundColor", [
+            backgroundColor.r,
+            backgroundColor.g,
+            backgroundColor.b,
+          ]);
+        } else {
+          renderPass.setUniform("backgroundColor", [0, 0, 0]);
+        }
       }
+
       setEnviromentVisible(enviromentVisible);
     }
 
     function updateMeshLight(decomposedScene) {
       const { meshLights } = decomposedScene;
+
       if (meshLights) {
         renderPass.setUniform("lights.position[0]", meshLights.position);
         renderPass.setUniform("lights.emission[0]", meshLights.emission);
@@ -2653,7 +2658,7 @@ var __defProp = Object.defineProperty,
     }
 
     function draw() {
-      renderPass.useProgram(false), n.draw();
+      renderPass.useProgram(false), fullscreenQuad.draw();
     }
 
     function setSize(width, height) {
@@ -2673,18 +2678,18 @@ var __defProp = Object.defineProperty,
       }
     }
 
-    function setGBuffers({ position: e }) {
-      renderPass.setTexture("gPosition", e);
+    function setGBuffers({ position }) {
+      renderPass.setTexture("gPosition", position);
     }
 
     // noiseImage is a 32-bit PNG image
     function setNoise(noiseImage) {
       renderPass.setTexture(
         "noiseTex",
-        makeTexture(e, {
+        makeTexture(gl, {
           data: noiseImage,
-          wrapS: e.REPEAT,
-          wrapT: e.REPEAT,
+          wrapS: gl.REPEAT,
+          wrapT: gl.REPEAT,
           storage: "halfFloat",
         })
       );
@@ -2698,9 +2703,9 @@ var __defProp = Object.defineProperty,
       renderPass.setUniform("frameCount", frameCount);
     }
 
-    updateBounces(t);
-    updateEnvLight(a);
-    updateMeshLight(a);
+    updateBounces(bounces);
+    updateEnvLight(decomposedScene);
+    updateMeshLight(decomposedScene);
 
     samples = makeStratifiedSamplerCombined(1, samplingDimensions);
 

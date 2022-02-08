@@ -498,9 +498,9 @@
           rgbeLoader3.load(envMapPath3, resolve);
         });
 
-        scene.environment = envMap;
+        //  scene.environment = envMap3;
 
-        // scene.environment = new THREE.Color("white");
+        scene.environment = new THREE.Color("white");
 
         const gltfLoader = new THREE.GLTFLoader();
         const gltfInfo = await new Promise((resolve) => {

@@ -2288,7 +2288,6 @@ var __defProp = Object.defineProperty,
         throw new Error("BVHWorker is building");
       }
 
-      console.log(this.worker);
       this.building = true;
 
       return new Promise((resolve, reject) => {
@@ -2338,91 +2337,101 @@ var __defProp = Object.defineProperty,
     return newArray;
   }
 
+  function flattenBvh(bvh) {
+    const flat = [];
+    const isBounds = [];
+    const splitAxisMap = { x: 0, y: 1, z: 2 };
+
+    let maxDepth = 1;
+
+    const traverse = (node, depth = 1) => {
+      maxDepth = Math.max(depth, maxDepth);
+
+      if (node.primitives) {
+        for (let i = 0; i < node.primitives.length; i++) {
+          const p = node.primitives[i];
+          flat.push(
+            p.indices[0],
+            p.indices[1],
+            p.indices[2],
+            node.primitives.length,
+            p.faceNormal.x,
+            p.faceNormal.y,
+            p.faceNormal.z,
+            p.materialIndex
+          );
+          isBounds.push(false);
+        }
+      } else {
+        const isBounds = node.bounds;
+
+        flat.push(
+          isBounds.min.x,
+          isBounds.min.y,
+          isBounds.min.z,
+          splitAxisMap[node.splitAxis],
+          isBounds.max.x,
+          isBounds.max.y,
+          isBounds.max.z,
+          null // pointer to second shild
+        );
+
+        const i = flat.length - 1;
+        isBounds.push(true);
+
+        traverse(node.child0, depth + 1);
+        flat[i] = flat.length / 4; // pointer to second child
+        traverse(node.child1, depth + 1);
+      }
+    };
+
+    traverse(bvh);
+
+    const buffer = new ArrayBuffer(4 * flat.length);
+    const floatView = new Float32Array(buffer);
+    const intView = new Int32Array(buffer);
+
+    for (let i = 0; i < isBounds.length; i++) {
+      let k = 8 * i;
+
+      if (isBounds[i]) {
+        floatView[k] = flat[k];
+        floatView[k + 1] = flat[k + 1];
+        floatView[k + 2] = flat[k + 2];
+        intView[k + 3] = flat[k + 3];
+      } else {
+        intView[k] = flat[k];
+        intView[k + 1] = flat[k + 1];
+        intView[k + 2] = flat[k + 2];
+        intView[k + 3] = -flat[k + 3];
+      }
+
+      floatView[k + 4] = flat[k + 4];
+      floatView[k + 5] = flat[k + 5];
+      floatView[k + 6] = flat[k + 6];
+      intView[k + 7] = flat[k + 7];
+    }
+
+    return { maxDepth, count: flat.length / 4, buffer: floatView };
+  }
+
   function createBvh(geometry, useWorker = true) {
     if (useWorker && window.Worker) {
       return new BVHWorker().build(geometry);
     }
 
     return new Promise((resolve) => {
-      const a = (function (bvh) {
-        const flat = [];
-        const isBounds = [],
-          n = { x: 0, y: 1, z: 2 };
+      const bvh = bvhAccel(geometry);
+      const flattenedBvh = flattenBvh(bvh);
 
-        let maxDepth = 1;
-
-        const traverse = (e, r = 1) => {
-          if (((maxDepth = Math.max(r, maxDepth)), e.primitives)) {
-            for (let n = 0; n < e.primitives.length; n++) {
-              const i = e.primitives[n];
-              flat.push(
-                i.indices[0],
-                i.indices[1],
-                i.indices[2],
-                e.primitives.length,
-                i.faceNormal.x,
-                i.faceNormal.y,
-                i.faceNormal.z,
-                i.materialIndex
-              ),
-                isBounds.push(false);
-            }
-          } else {
-            const i = e.bounds;
-            flat.push(
-              i.min.x,
-              i.min.y,
-              i.min.z,
-              n[e.splitAxis],
-              i.max.x,
-              i.max.y,
-              i.max.z,
-              null // pointer to second shild
-            );
-            const s = flat.length - 1;
-            isBounds.push(true);
-            traverse(e.child0, r + 1);
-            flat[s] = flat.length / 4; // pointer to second child
-            traverse(e.child1, r + 1);
-          }
-        };
-
-        traverse(bvh);
-
-        const r = new ArrayBuffer(4 * flat.length),
-          s = new Float32Array(r),
-          l = new Int32Array(r);
-        for (let f = 0; f < isBounds.length; f++) {
-          let e = 8 * f;
-          if (isBounds[f]) {
-            s[e] = flat[e];
-            s[e + 1] = flat[e + 1];
-            s[e + 2] = flat[e + 2];
-            l[e + 3] = flat[e + 3];
-          } else {
-            l[e] = flat[e];
-            l[e + 1] = flat[e + 1];
-            l[e + 2] = flat[e + 2];
-            l[e + 3] = -flat[e + 3];
-          }
-
-          s[e + 4] = flat[e + 4];
-          s[e + 5] = flat[e + 5];
-          s[e + 6] = flat[e + 6];
-          l[e + 7] = flat[e + 7];
-        }
-
-        return { maxDepth, count: flat.length / 4, buffer: s };
-      })(bvhAccel(geometry));
-
-      resolve(a);
+      resolve(flattenedBvh);
     });
   }
 
-  async function ne(
+  async function makeRayTracePass(
     e,
     {
-      bounces: t,
+      bounces: t, // number of global illumination bounces
       decomposedScene: a,
       fullscreenQuad: n,
       materialBuffer: i,
@@ -2435,35 +2444,41 @@ var __defProp = Object.defineProperty,
     }
   ) {
     let c;
+
     const u = await (async function ({
-        decomposedScene: e,
+        decomposedScene,
         fullscreenQuad: t,
         gl: a,
         materialBuffer: n,
         mergedMesh: i,
-        optionalExtensions: o,
+        optionalExtensions,
         useWorker: r,
-        loadingCallback: s,
+        loadingCallback,
       }) {
-        const { OES_texture_float_linear: l } = o,
-          { camera: f, meshLightsNum: d, isTextureEnv: c } = e,
+        const { OES_texture_float_linear } = optionalExtensions,
+          { camera: f, meshLightsNum: d, isTextureEnv: c } = decomposedScene,
           { geometry: u, materials: p } = i;
-        s &&
-          s.onProgress &&
-          "function" == typeof s.onProgress &&
-          s.onProgress("Building BVH...");
-        const m = await createBvh(u, r),
+
+        if (
+          loadingCallback?.onProgress &&
+          "function" == typeof loadingCallback?.onProgress
+        ) {
+          loadingCallback.onProgress("Building BVH...");
+        }
+
+        const flattenedBvh = await createBvh(u, r),
           L = u.index.count / 3,
-          x = makeRenderPass(a, {
+          renderPass = makeRenderPass(a, {
             defines: __spreadValues(
               {
-                OES_texture_float_linear: l,
-                BVH_COLUMNS: textureDimensionsFromArray(m.count).columnsLog,
+                OES_texture_float_linear,
+                BVH_COLUMNS: textureDimensionsFromArray(flattenedBvh.count)
+                  .columnsLog,
                 INDEX_COLUMNS: textureDimensionsFromArray(L).columnsLog,
                 VERTEX_COLUMNS: textureDimensionsFromArray(
                   u.attributes.position.count
                 ).columnsLog,
-                STACK_SIZE: m.maxDepth,
+                STACK_SIZE: flattenedBvh.maxDepth,
                 USE_LENS_CAMERA: f.isLensCamera,
                 NUM_LIGHTS: d,
                 CONST_COLOR_ENV: !c,
@@ -2474,26 +2489,29 @@ var __defProp = Object.defineProperty,
             vertex: t.vertexShader,
           });
         return (
-          x.setTexture("diffuseMap", n.textures.diffuseMap),
-          x.setTexture("normalMap", n.textures.normalMap),
-          x.setTexture("pbrMap", n.textures.pbrMap),
-          x.setTexture("pbrSGMap", n.textures.pbrSGMap),
+          renderPass.setTexture("diffuseMap", n.textures.diffuseMap),
+          renderPass.setTexture("normalMap", n.textures.normalMap),
+          renderPass.setTexture("pbrMap", n.textures.pbrMap),
+          renderPass.setTexture("pbrSGMap", n.textures.pbrSGMap),
           n.textures.emissiveMap &&
-            x.setTexture("emissiveMap", n.textures.emissiveMap),
-          x.setTexture(
+            renderPass.setTexture("emissiveMap", n.textures.emissiveMap),
+          renderPass.setTexture(
             "positionBuffer",
             makeDataTexture(a, u.getAttribute("position").array, 3)
           ),
-          x.setTexture(
+          renderPass.setTexture(
             "normalBuffer",
             makeDataTexture(a, u.getAttribute("normal").array, 3)
           ),
-          x.setTexture(
+          renderPass.setTexture(
             "uvBuffer",
             makeDataTexture(a, u.getAttribute("uv").array, 2)
           ),
-          x.setTexture("bvhBuffer", makeDataTexture(a, m.buffer, 4)),
-          x
+          renderPass.setTexture(
+            "bvhBuffer",
+            makeDataTexture(a, flattenedBvh.buffer, 4)
+          ),
+          renderPass
         );
       })({
         bounces: t,
@@ -2638,6 +2656,7 @@ var __defProp = Object.defineProperty,
       }
     );
   }
+
   var ie = {
       source:
         "in vec3 aPosition;in vec3 aNormal;in vec2 aUv;in ivec2 aMaterialMeshIndex;uniform mat4 projView;out vec3 vPosition;out vec3 vNormal;out vec2 vUv;flat out ivec2 vMaterialMeshIndex;void main(){vPosition=aPosition;vNormal=aNormal;vUv=aUv;vMaterialMeshIndex=aMaterialMeshIndex;gl_Position=projView*vec4(aPosition,1);}",
@@ -3080,7 +3099,7 @@ var __defProp = Object.defineProperty,
       w = 0,
       Q = !0,
       D = () => {};
-    const Y = await ne(e, {
+    const Y = await makeRayTracePass(e, {
         bounces: s,
         decomposedScene: T,
         fullscreenQuad: y,

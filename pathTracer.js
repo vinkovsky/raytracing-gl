@@ -2319,20 +2319,21 @@ var __defProp = Object.defineProperty,
           isBounds.push(false);
         }
       } else {
-        const isBounds = node.bounds;
+        const bounds = node.bounds;
 
         flat.push(
-          isBounds.min.x,
-          isBounds.min.y,
-          isBounds.min.z,
+          bounds.min.x,
+          bounds.min.y,
+          bounds.min.z,
           splitAxisMap[node.splitAxis],
-          isBounds.max.x,
-          isBounds.max.y,
-          isBounds.max.z,
+          bounds.max.x,
+          bounds.max.y,
+          bounds.max.z,
           null // pointer to second shild
         );
 
         const i = flat.length - 1;
+
         isBounds.push(true);
 
         traverse(node.child0, depth + 1);
@@ -2900,12 +2901,13 @@ var __defProp = Object.defineProperty,
   function makeDenoisePass(gl, params) {
     const { fullscreenQuad } = params;
 
-    let n, i;
+    let dBuffer;
+    let dBufferBack;
 
-    function o() {
-      let e = i;
-      i = n;
-      n = e;
+    function swapDBuffer() {
+      let temp = dBuffer;
+      dBuffer = dBufferBack;
+      dBufferBack = temp;
     }
 
     const renderPassConfig = {
@@ -2923,37 +2925,44 @@ var __defProp = Object.defineProperty,
     function draw(params) {
       let { light, reprojectData } = params;
 
-      for (let u = 0; u < 3; u++) {
-        renderPass.setUniform("level", u);
-        renderPass.setUniform("colorFactor", (1 / (1 << u)) * colorFactor);
-        renderPass.setUniform("normalFactor", (1 / (1 << u)) * normalFactor);
+      for (let i = 0; i < 3; i++) {
+        renderPass.setUniform("level", i);
+        renderPass.setUniform("colorFactor", (1 / (1 << i)) * colorFactor);
+        renderPass.setUniform("normalFactor", (1 / (1 << i)) * normalFactor);
         renderPass.setUniform(
           "positionFactor",
-          (1 / (1 << u)) * positionFactor
+          (1 / (1 << i)) * positionFactor
         );
 
-        renderPass.setUniform("stepwidth", (1 << (u + 1)) - 1);
+        renderPass.setUniform("stepwidth", (1 << (i + 1)) - 1);
 
-        0 === u
-          ? renderPass.setTexture("lightTex", light)
-          : renderPass.setTexture("lightTex", n.color[0]);
+        if (i === 0) {
+          renderPass.setTexture("lightTex", light);
+        } else {
+          renderPass.setTexture("lightTex", dBufferBack.color[0]);
+        }
 
-        reprojectData
-          ? (renderPass.setUniform("useMomentVariance", 1),
-            renderPass.setTexture("reprojectDataTex", reprojectData))
-          : (renderPass.setUniform("useMomentVariance", 0),
-            renderPass.setTexture("reprojectDataTex", null));
+        if (reprojectData) {
+          renderPass.setUniform("useMomentVariance", 1);
+          renderPass.setTexture("reprojectDataTex", reprojectData);
+        } else {
+          renderPass.setUniform("useMomentVariance", 0);
+          renderPass.setTexture("reprojectDataTex", null);
+        }
 
-        i.bind();
+        dBuffer.bind();
+
         gl.clear(gl.COLOR_BUFFER_BIT);
         gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
         renderPass.useProgram();
         fullscreenQuad.draw();
-        i.unbind();
-        o();
+
+        dBuffer.unbind();
+
+        swapDBuffer();
       }
 
-      return n;
+      return dBufferBack;
     }
 
     function setGBuffers({ position, normal, color }) {
@@ -2986,23 +2995,26 @@ var __defProp = Object.defineProperty,
       };
     }
 
-    function setSize(t, a) {
-      !(function (t, a) {
-        const o = () =>
-          makeFramebuffer(gl, {
-            color: {
-              0: makeTexture(gl, {
-                width: t,
-                height: a,
-                storage: "float",
-                magFilter: gl.NEAREST,
-                minFilter: gl.NEAREST,
-              }),
-            },
-          });
-        n = o();
-        i = o();
-      })(t, a);
+    function initFrameBuffer(width, height) {
+      const makeDBuffer = () =>
+        makeFramebuffer(gl, {
+          color: {
+            0: makeTexture(gl, {
+              width,
+              height,
+              storage: "float",
+              magFilter: gl.NEAREST,
+              minFilter: gl.NEAREST,
+            }),
+          },
+        });
+
+      dBuffer = makeDBuffer();
+      dBufferBack = makeDBuffer();
+    }
+
+    function setSize(width, height) {
+      initFrameBuffer(width, height);
     }
 
     return {
@@ -3017,63 +3029,116 @@ var __defProp = Object.defineProperty,
     };
   }
 
-  function Le(e) {
-    let t,
-      a,
-      n,
-      i,
-      o,
-      r = -1,
-      s = 1,
-      l = 0,
-      f = 0,
-      d = (function (e) {
-        const t = e.getParameter(e.MAX_RENDERBUFFER_SIZE);
-        return t <= 8192 ? 2e5 : 16384 === t ? 4e5 : t >= 32768 ? 6e5 : void 0;
-      })(e);
-    function c() {
-      const e = l / f;
-      (t = Math.ceil(l / Math.round(l / Math.sqrt(d * e)))),
-        (a = Math.ceil(t / e)),
-        (n = Math.ceil(l / t)),
-        (i = Math.ceil(f / a)),
-        (s = n * i);
+  function pixelsPerTileEstimate(gl) {
+    const maxRenderbufferSize = gl.getParameter(gl.MAX_RENDERBUFFER_SIZE);
+
+    if (maxRenderbufferSize <= 8192) {
+      return 2e5;
+    } else if (maxRenderbufferSize === 16384) {
+      return 4e5;
+    } else if (maxRenderbufferSize >= 32768) {
+      return 6e5;
     }
-    function u() {
-      (r = -1), (o = NaN);
+  }
+
+  function makeTileRender(gl) {
+    const desiredMsPerTile = 21;
+
+    let currentTile = -1;
+    let numTiles = 1;
+
+    let tileWidth;
+    let tileHeight;
+
+    let columns;
+    let rows;
+
+    let width = 0;
+    let height = 0;
+
+    let totalElapsedMs;
+
+    // initial number of pixels per rendered tile
+    // based on correlation between system performance and max supported render buffer size
+    // adjusted dynamically according to system performance
+    let pixelsPerTile = pixelsPerTileEstimate(gl);
+
+    function calcTileDimensions() {
+      const aspectRatio = width / height;
+
+      // quantize the width of the tile so that it evenly divides the entire window
+      tileWidth = Math.ceil(
+        width / Math.round(width / Math.sqrt(pixelsPerTile * aspectRatio))
+      );
+      tileHeight = Math.ceil(tileWidth / aspectRatio);
+
+      columns = Math.ceil(width / tileWidth);
+      rows = Math.ceil(height / tileHeight);
+      numTiles = columns * rows;
     }
+
+    function reset() {
+      currentTile = -1;
+      totalElapsedMs = NaN;
+    }
+
+    function updatePixelsPerTile() {
+      const msPerTile = totalElapsedMs / numTiles;
+
+      const error = desiredMsPerTile - msPerTile;
+
+      // tweak to find balance. higher = faster convergence, lower = less fluctuations to microstutters
+      const strength = 5e3;
+
+      // sqrt prevents massive fluctuations in pixelsPerTile for the occasional stutter
+      pixelsPerTile +=
+        strength * Math.sign(error) * Math.sqrt(Math.abs(msPerTile));
+      pixelsPerTile = clamp(pixelsPerTile, 8192, width * height);
+    }
+
+    function nextTile(elapsedFrameMs) {
+      currentTile++;
+      totalElapsedMs += elapsedFrameMs;
+
+      if (currentTile % numTiles == 0) {
+        if (totalElapsedMs) {
+          updatePixelsPerTile();
+          calcTileDimensions();
+        }
+
+        totalElapsedMs = 0;
+        currentTile = 0;
+      }
+
+      const isLastTile = currentTile === numTiles - 1;
+
+      const x = currentTile % columns;
+      const y = Math.floor(currentTile / columns) % rows;
+
+      return {
+        x: x * tileWidth,
+        y: y * tileHeight,
+        tileWidth,
+        tileHeight,
+        isFirstTile: currentTile === 0,
+        isLastTile,
+      };
+    }
+
+    function setSize(w, h) {
+      width = w;
+      height = h;
+      reset();
+      calcTileDimensions();
+    }
+
     return {
-      nextTile: function (e) {
-        r++,
-          (o += e),
-          r % s == 0 &&
-            (o &&
-              (!(function () {
-                const e = 21 - o / s;
-                (d += 5e3 * Math.sign(e) * Math.sqrt(Math.abs(e))),
-                  (d = clamp(d, 8192, l * f));
-              })(),
-              c()),
-            (o = 0),
-            (r = 0));
-        const u = r === s - 1,
-          p = r % n,
-          m = Math.floor(r / n) % i;
-        return {
-          x: p * t,
-          y: m * a,
-          tileWidth: t,
-          tileHeight: a,
-          isFirstTile: 0 === r,
-          isLastTile: u,
-        };
-      },
-      reset: u,
-      setSize: function (e, t) {
-        (l = e), (f = t), u(), c();
-      },
+      nextTile,
+      reset,
+      setSize,
     };
   }
+
   async function makeRenderingPipeline({
     gl: e,
     optionalExtensions: a,
@@ -3129,7 +3194,7 @@ var __defProp = Object.defineProperty,
           },
         };
       })(e),
-      I = Le(e),
+      I = makeTileRender(e),
       T = decomposeScene(i, o),
       P = mergeMeshesToGeometry(T.meshes),
       N = makeMaterialBuffer(e, P.materials),

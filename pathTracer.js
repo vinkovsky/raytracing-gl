@@ -2896,85 +2896,127 @@ var __defProp = Object.defineProperty,
     source:
       "vec4 LGL_An(sampler2D map,vec2 uv){\n#ifdef OES_texture_float_linear\nreturn texture(map,uv);\n#else\nvec2 size=vec2(textureSize(map,0));vec2 texelSize=1.0/size;uv=uv*size-0.5;vec2 f=fract(uv);uv=floor(uv)+0.5;vec4 s1=texture(map,(uv+vec2(0,0))*texelSize);vec4 s2=texture(map,(uv+vec2(1,0))*texelSize);vec4 s3=texture(map,(uv+vec2(0,1))*texelSize);vec4 s4=texture(map,(uv+vec2(1,1))*texelSize);return mix(mix(s1,s2,f.x),mix(s3,s4,f.x),f.y);\n#endif\n}layout(location=0)out vec4 out_color;in vec2 vCoord;uniform sampler2D lightTex;uniform sampler2D LGL_AsDataTex;uniform sampler2D gPosition;uniform sampler2D gNormal;uniform sampler2D gColor;uniform float colorFactor;uniform float normalFactor;uniform float positionFactor;uniform float stepwidth;uniform int level;uniform float useMomentVariance;uniform float demodulateAlbedo;float LGL_Ap(float v){return acos(min(max(v,0.0),1.0));}float LGL_Aq(vec2 uv){return max(texture(LGL_AsDataTex,uv).a,0.);}vec4 LGL_Ar(){vec4 upscaledLight=texture(lightTex,vCoord);float sampleFrame=upscaledLight.a;float sf2=sampleFrame*sampleFrame;vec3 color=upscaledLight.rgb/upscaledLight.a;vec3 normal=texture(gNormal,vCoord).rgb;vec4 positionAndMeshIndex=texture(gPosition,vCoord);vec3 position=positionAndMeshIndex.rgb;float meshIndex=positionAndMeshIndex.w;bool isBG=meshIndex>0.0 ? false : true;if(isBG){return upscaledLight;}vec2 size=vec2(textureSize(lightTex,0));int kernelRadius=9;float dx=1./size.x;float dy=1./size.y;float kernel[9]=float[9](1.0/16.0,1.0/8.0,1.0/16.0,1.0/8.0,1.0/4.0,1.0/8.0,1.0/16.0,1.0/8.0,1.0/16.0);vec2 offset[9]=vec2[9](vec2(-dx,-dy),vec2(0,-dy),vec2(dx,-dy),vec2(-dx,0),vec2(0,0),vec2(dx,0),vec2(-dx,dy),vec2(0,dy),vec2(dx,dy));vec3 colorSum=vec3(0.);float weightSum=0.;float var;float varSum;float varSumWeight;if(useMomentVariance>0.){for(int i=0;i<kernelRadius;i++){vec2 uv=vCoord+offset[i];if(uv.x<0.0||uv.x>1.0||uv.y<0.0||uv.y>1.0){continue;}vec4 positionAndMeshIndex=texture(gPosition,uv);float meshIndex=positionAndMeshIndex.w;bool isBG=meshIndex>0.0 ? false : true;if(isBG){continue;}varSum+=kernel[i]*LGL_Aq(uv);varSumWeight+=kernel[i];}if(varSumWeight>0.0){var=max(varSum/varSumWeight,0.0);}else{var=max(LGL_Aq(vCoord),0.0);}}for(int i=0;i<kernelRadius;i++){vec2 uv=vCoord+offset[i]*float(stepwidth);if(uv.x<0.0||uv.x>1.0||uv.y<0.0||uv.y>1.0){continue;}vec4 positionAndMeshIndex=texture(gPosition,uv);float meshIndex=positionAndMeshIndex.w;bool isBG=meshIndex>0.0 ? false : true;if(isBG){continue;}vec4 upscaledLight=texture(lightTex,uv);vec3 kernelColor=upscaledLight.rgb/upscaledLight.a;float Dc=distance(color,kernelColor);float Wc;if(useMomentVariance>0.){Wc=min(exp(-Dc/((1.+sqrt(var))*colorFactor+1e-6)),1.0);}else{Wc=min(exp(-Dc/(colorFactor+1e-6)),1.0);}vec3 kernelNormal=texture(gNormal,uv).rgb;float Dn=dot(normal,kernelNormal);Dn=Dn/float(stepwidth*stepwidth+1e-6);if(Dn<1e-3){continue;}float Wn=Dn;vec3 kernelPosition=positionAndMeshIndex.rgb;float Dp=distance(position,kernelPosition);float Wp=min(exp(-Dp/(positionFactor+1e-6)),1.0);float weight=Wc*Wn*Wp*kernel[i];weightSum+=weight;colorSum+=kernelColor*weight;}colorSum=colorSum/weightSum;return vec4(colorSum*sampleFrame,sampleFrame);}void main(){vec4 light=LGL_Ar();out_color=light;}",
   };
-  function me(e, t) {
-    const { fullscreenQuad: a } = t;
+
+  function makeDenoisePass(gl, params) {
+    const { fullscreenQuad } = params;
+
     let n, i;
+
     function o() {
       let e = i;
-      (i = n), (n = e);
+      i = n;
+      n = e;
     }
-    const r = { gl: e, vertex: a.vertexShader, fragment: pe },
-      s = makeRenderPass(e, r);
-    let f = 0.5,
-      d = 0.2,
-      c = 0.35;
+
+    const renderPassConfig = {
+      gl,
+      vertex: fullscreenQuad.vertexShader,
+      fragment: pe,
+    };
+
+    const renderPass = makeRenderPass(gl, renderPassConfig);
+
+    let colorFactor = 0.5;
+    let normalFactor = 0.2;
+    let positionFactor = 0.35;
+
+    function draw(params) {
+      let { light, reprojectData } = params;
+
+      for (let u = 0; u < 3; u++) {
+        renderPass.setUniform("level", u);
+        renderPass.setUniform("colorFactor", (1 / (1 << u)) * colorFactor);
+        renderPass.setUniform("normalFactor", (1 / (1 << u)) * normalFactor);
+        renderPass.setUniform(
+          "positionFactor",
+          (1 / (1 << u)) * positionFactor
+        );
+
+        renderPass.setUniform("stepwidth", (1 << (u + 1)) - 1);
+
+        0 === u
+          ? renderPass.setTexture("lightTex", light)
+          : renderPass.setTexture("lightTex", n.color[0]);
+
+        reprojectData
+          ? (renderPass.setUniform("useMomentVariance", 1),
+            renderPass.setTexture("reprojectDataTex", reprojectData))
+          : (renderPass.setUniform("useMomentVariance", 0),
+            renderPass.setTexture("reprojectDataTex", null));
+
+        i.bind();
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
+        renderPass.useProgram();
+        fullscreenQuad.draw();
+        i.unbind();
+        o();
+      }
+
+      return n;
+    }
+
+    function setGBuffers({ position, normal, color }) {
+      renderPass.setTexture("gPosition", position);
+      renderPass.setTexture("gNormal", normal);
+      renderPass.setTexture("gColor", color);
+    }
+
+    function setColorFactor(factor) {
+      colorFactor = factor;
+    }
+
+    function setNormalFactor(factor) {
+      normalFactor = factor;
+    }
+
+    function setPositionFactor(factor) {
+      positionFactor = factor;
+    }
+
+    function setDemodulateAlbedo(factor) {
+      renderPass.setUniform("demodulateAlbedo", factor);
+    }
+
+    function getDenoiseFactors() {
+      return {
+        colorFactor,
+        normalFactor,
+        positionFactor,
+      };
+    }
+
+    function setSize(t, a) {
+      !(function (t, a) {
+        const o = () =>
+          makeFramebuffer(gl, {
+            color: {
+              0: makeTexture(gl, {
+                width: t,
+                height: a,
+                storage: "float",
+                magFilter: gl.NEAREST,
+                minFilter: gl.NEAREST,
+              }),
+            },
+          });
+        n = o();
+        i = o();
+      })(t, a);
+    }
+
     return {
-      draw: function (t) {
-        let { light: r, reprojectData: l } = t;
-        for (let u = 0; u < 3; u++)
-          s.setUniform("level", u),
-            s.setUniform("colorFactor", (1 / (1 << u)) * f),
-            s.setUniform("normalFactor", (1 / (1 << u)) * d),
-            s.setUniform("positionFactor", (1 / (1 << u)) * c),
-            s.setUniform("stepwidth", (1 << (u + 1)) - 1),
-            0 === u
-              ? s.setTexture("lightTex", r)
-              : s.setTexture("lightTex", n.color[0]),
-            l
-              ? (s.setUniform("useMomentVariance", 1),
-                s.setTexture("reprojectDataTex", l))
-              : (s.setUniform("useMomentVariance", 0),
-                s.setTexture("reprojectDataTex", null)),
-            i.bind(),
-            e.clear(e.COLOR_BUFFER_BIT),
-            e.viewport(0, 0, e.drawingBufferWidth, e.drawingBufferHeight),
-            s.useProgram(),
-            a.draw(),
-            i.unbind(),
-            o();
-        return n;
-      },
-      setGBuffers: function ({ position: e, normal: t, color: a }) {
-        s.setTexture("gPosition", e),
-          s.setTexture("gNormal", t),
-          s.setTexture("gColor", a);
-      },
-      setColorFactor: function (e) {
-        f = e;
-      },
-      setNormalFactor: function (e) {
-        d = e;
-      },
-      setPositionFactor: function (e) {
-        c = e;
-      },
-      setDemodulateAlbedo: function (e) {
-        s.setUniform("demodulateAlbedo", e);
-      },
-      getDenoiseFactors: () => ({
-        colorFactor: f,
-        normalFactor: d,
-        positionFactor: c,
-      }),
-      setSize: function (t, a) {
-        !(function (t, a) {
-          const o = () =>
-            makeFramebuffer(e, {
-              color: {
-                0: makeTexture(e, {
-                  width: t,
-                  height: a,
-                  storage: "float",
-                  magFilter: e.NEAREST,
-                  minFilter: e.NEAREST,
-                }),
-              },
-            });
-          (n = o()), (i = o());
-        })(t, a);
-      },
+      draw,
+      setGBuffers,
+      setColorFactor,
+      setNormalFactor,
+      setPositionFactor,
+      setDemodulateAlbedo,
+      getDenoiseFactors,
+      setSize,
     };
   }
+
   function Le(e) {
     let t,
       a,
@@ -3186,7 +3228,7 @@ var __defProp = Object.defineProperty,
           }),
         };
       })(e, { fullscreenQuad: y, maxReprojectedSamples: 20 }),
-      z = me(e, { fullscreenQuad: y, toneMapping: r });
+      z = makeDenoisePass(e, { fullscreenQuad: y, toneMapping: r });
     let B,
       V,
       C = !1,

@@ -3139,6 +3139,193 @@ var __defProp = Object.defineProperty,
     };
   }
 
+  function pixelsPerFrameEstimate(gl) {
+    const maxRenderbufferSize = gl.getParameter(gl.MAX_RENDERBUFFER_SIZE);
+
+    if (maxRenderbufferSize <= 8192) {
+      return 8e4;
+    } else if (maxRenderbufferSize === 16384) {
+      return 15e4;
+    } else if (maxRenderbufferSize >= 32768) {
+      return 4e5;
+    }
+  }
+
+  function makeRenderSize(gl) {
+    const desiredMsPerFrame = 20;
+
+    let fullWidth;
+    let fullHeight;
+
+    let renderWidth;
+    let renderHeight;
+
+    const scale = new THREE.Vector2(1, 1);
+
+    let pixelsPerFrame = pixelsPerFrameEstimate(gl);
+
+    function calcDimensions() {
+      const aspectRatio = fullWidth / fullHeight;
+
+      renderWidth = Math.round(
+        clamp(Math.sqrt(pixelsPerFrame * aspectRatio), 1, fullWidth)
+      );
+
+      renderHeight = Math.round(
+        clamp(renderWidth / aspectRatio, 1, fullHeight)
+      );
+
+      scale.set(renderWidth / fullWidth, renderHeight / fullHeight);
+    }
+
+    function adjustSize(elapsedFrameMs) {
+      if (elapsedFrameMs) {
+        // tweak to find balance. higher = faster convergence, lower = less fluctuations to microstutters
+        const strength = 600;
+
+        const error = desiredMsPerFrame - elapsedFrameMs;
+
+        pixelsPerFrame += strength * error;
+        pixelsPerFrame = clamp(pixelsPerFrame, 8192, fullWidth * fullHeight);
+        calcDimensions();
+      }
+    }
+
+    function setSize(w, h) {
+      fullWidth = w;
+      fullHeight = h;
+      calcDimensions();
+    }
+
+    return {
+      adjustSize,
+      setSize,
+      scale,
+      get width() {
+        return renderWidth;
+      },
+      get height() {
+        return renderHeight;
+      },
+    };
+  }
+
+  function makeFullscreenQuad(gl) {
+    const vao = gl.createVertexArray();
+
+    gl.bindVertexArray(vao);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+    gl.bufferData(
+      gl.ARRAY_BUFFER,
+      new Float32Array([0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1]),
+      gl.STATIC_DRAW
+    );
+
+    // vertex shader should set layout(location = 0) on position attribute
+    const posLoc = 0;
+
+    gl.enableVertexAttribArray(posLoc);
+    gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+
+    gl.bindVertexArray(null);
+
+    const vertexShader = makeVertexShader(gl, { vertex: fullscreenQuad });
+
+    function draw() {
+      gl.bindVertexArray(vao);
+      gl.drawArrays(gl.TRIANGLES, 0, 6);
+    }
+
+    return {
+      draw,
+      vertexShader,
+    };
+  }
+
+  function makeReprojectPass(e, params) {
+    const { fullscreenQuad, maxReprojectedSamples } = params;
+
+    const renderPass = makeRenderPass(e, {
+      defines: { MAX_SAMPLES: maxReprojectedSamples.toFixed(1) },
+      vertex: fullscreenQuad.vertexShader,
+      fragment: ue,
+    });
+
+    const historyCamera = new THREE.Matrix4();
+
+    let colorBlendFactor = 0.2;
+    let momentBlendFactor = 0.2;
+
+    function draw(params) {
+      const {
+        light,
+        position,
+        color,
+        previousColor,
+        previousLight,
+        previousPosition,
+        previousMomentLengthVariance,
+      } = params;
+
+      renderPass.setTexture("lightTex", light);
+      renderPass.setTexture("positionTex", position);
+      renderPass.setTexture("colorTex", color);
+      renderPass.setTexture("previousLightTex", previousLight);
+      renderPass.setTexture("previousPositionTex", previousPosition);
+      renderPass.setTexture("previousColorTex", previousColor);
+      renderPass.setTexture(
+        "previousMomentLengthVarianceTex",
+        previousMomentLengthVariance
+      );
+      renderPass.setUniform("colorBlendFactor", colorBlendFactor);
+      renderPass.setUniform("momentBlendFactor", momentBlendFactor);
+      renderPass.useProgram();
+      fullscreenQuad.draw();
+    }
+
+    function setJitter(x, y) {
+      renderPass.setUniform("jitter", x, y);
+    }
+
+    function setPreviousCamera(camera) {
+      historyCamera.multiplyMatrices(
+        camera.projectionMatrix,
+        camera.matrixWorldInverse
+      );
+      renderPass.setUniform("historyCamera", historyCamera.elements);
+    }
+
+    function setDenoiseColorBlendFactor(factor) {
+      colorBlendFactor = factor;
+    }
+
+    function setDenoiseMomentBlendFactor(factor) {
+      momentBlendFactor = factor;
+    }
+
+    function setDemodulateAlbedo(factor) {
+      renderPass.setUniform("demodulateAlbedo", factor);
+    }
+
+    function getDenoiseFactors() {
+      return {
+        colorBlendFactor,
+        momentBlendFactor,
+      };
+    }
+
+    return {
+      draw,
+      setJitter,
+      setPreviousCamera,
+      setDenoiseColorBlendFactor,
+      setDenoiseMomentBlendFactor,
+      setDemodulateAlbedo,
+      getDenoiseFactors,
+    };
+  }
+
   async function makeRenderingPipeline({
     gl: e,
     optionalExtensions: a,
@@ -3155,70 +3342,14 @@ var __defProp = Object.defineProperty,
     useWorker: _,
     loadingCallback: g,
   }) {
-    const S = new t.PerspectiveCamera(),
-      M = (function (e) {
-        let a,
-          n,
-          i,
-          o,
-          r = new t.Vector2(1, 1),
-          s = (function (e) {
-            const t = e.getParameter(e.MAX_RENDERBUFFER_SIZE);
-            return t <= 8192
-              ? 8e4
-              : 16384 === t
-              ? 15e4
-              : t >= 32768
-              ? 4e5
-              : void 0;
-          })(e);
-        function l() {
-          const e = a / n;
-          (i = Math.round(clamp(Math.sqrt(s * e), 1, a))),
-            (o = Math.round(clamp(i / e, 1, n))),
-            r.set(i / a, o / n);
-        }
-        return {
-          adjustSize: function (e) {
-            e && ((s += 600 * (20 - e)), (s = clamp(s, 8192, a * n)), l());
-          },
-          setSize: function (e, t) {
-            (a = e), (n = t), l();
-          },
-          scale: r,
-          get width() {
-            return i;
-          },
-          get height() {
-            return o;
-          },
-        };
-      })(e),
-      I = makeTileRender(e),
+    const S = new THREE.PerspectiveCamera(),
+      M = makeRenderSize(e);
+
+    const tileRender = makeTileRender(e),
       T = decomposeScene(i, o),
       P = mergeMeshesToGeometry(T.meshes),
       N = makeMaterialBuffer(e, P.materials),
-      y = (function (e) {
-        const t = e.createVertexArray();
-        return (
-          e.bindVertexArray(t),
-          e.bindBuffer(e.ARRAY_BUFFER, e.createBuffer()),
-          e.bufferData(
-            e.ARRAY_BUFFER,
-            new Float32Array([0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1]),
-            e.STATIC_DRAW
-          ),
-          e.enableVertexAttribArray(0),
-          e.vertexAttribPointer(0, 2, e.FLOAT, !1, 0, 0),
-          e.bindVertexArray(null),
-          {
-            draw: function () {
-              e.bindVertexArray(t), e.drawArrays(e.TRIANGLES, 0, 6);
-            },
-            vertexShader: makeVertexShader(e, { vertex: fullscreenQuad }),
-          }
-        );
-      })(e),
+      y = makeFullscreenQuad(e),
       b = makeGBufferPass(e, { materialBuffer: N, mergedMesh: P }),
       R = makeToneMapPass(e, { fullscreenQuad: y, toneMapping: r }),
       E = (function (e, t) {
@@ -3238,61 +3369,10 @@ var __defProp = Object.defineProperty,
           },
         };
       })(e, { fullscreenQuad: y }),
-      X = (function (e, t) {
-        const { fullscreenQuad: a, maxReprojectedSamples: i } = t,
-          o = makeRenderPass(e, {
-            defines: { MAX_SAMPLES: i.toFixed(1) },
-            vertex: a.vertexShader,
-            fragment: ue,
-          }),
-          r = new n.Matrix4();
-        let s = 0.2,
-          l = 0.2;
-        return {
-          draw: function (e) {
-            const {
-              light: t,
-              position: n,
-              color: i,
-              previousColor: r,
-              previousLight: f,
-              previousPosition: d,
-              previousMomentLengthVariance: c,
-            } = e;
-            o.setTexture("lightTex", t),
-              o.setTexture("positionTex", n),
-              o.setTexture("colorTex", i),
-              o.setTexture("previousLightTex", f),
-              o.setTexture("previousPositionTex", d),
-              o.setTexture("previousColorTex", r),
-              o.setTexture("previousMomentLengthVarianceTex", c),
-              o.setUniform("colorBlendFactor", s),
-              o.setUniform("momentBlendFactor", l),
-              o.useProgram(),
-              a.draw();
-          },
-          setJitter: function (e, t) {
-            o.setUniform("jitter", e, t);
-          },
-          setPreviousCamera: function (e) {
-            r.multiplyMatrices(e.projectionMatrix, e.matrixWorldInverse),
-              o.setUniform("historyCamera", r.elements);
-          },
-          setDenoiseColorBlendFactor: function (e) {
-            s = e;
-          },
-          setDenoiseMomentBlendFactor: function (e) {
-            l = e;
-          },
-          setDemodulateAlbedo: function (e) {
-            o.setUniform("demodulateAlbedo", e);
-          },
-          getDenoiseFactors: () => ({
-            colorBlendFactor: s,
-            momentBlendFactor: l,
-          }),
-        };
-      })(e, { fullscreenQuad: y, maxReprojectedSamples: 20 }),
+      X = makeReprojectPass(e, {
+        fullscreenQuad: y,
+        maxReprojectedSamples: 20,
+      }),
       z = makeDenoisePass(e, { fullscreenQuad: y, toneMapping: r });
     let B,
       V,
@@ -3428,7 +3508,7 @@ var __defProp = Object.defineProperty,
         tileHeight: o,
         isFirstTile: r,
         isLastTile: s,
-      } = I.nextTile(V);
+      } = tileRender.nextTile(V);
       r &&
         (0 === w && (re(k), X.setPreviousCamera(S)),
         ie(ee, te, !0),
@@ -3469,7 +3549,10 @@ var __defProp = Object.defineProperty,
         C &&
           (oe(e, S)
             ? ve()
-            : (ae(e, S), Q ? (Q = !1) : u ? Ae() : ve(!0), (w = 0), I.reset()));
+            : (ae(e, S),
+              Q ? (Q = !1) : u ? Ae() : ve(!0),
+              (w = 0),
+              tileRender.reset()));
       },
       fullDraw: function (e) {
         if (C) {
@@ -3490,7 +3573,7 @@ var __defProp = Object.defineProperty,
       setSize: function (t, a) {
         (ee = t),
           (te = a),
-          I.setSize(t, a),
+          tileRender.setSize(t, a),
           M.setSize(t, a),
           (function (t, a) {
             (k = makeFramebuffer(e, {
@@ -3571,7 +3654,7 @@ var __defProp = Object.defineProperty,
         (V = e - B), (B = e);
       },
       reset: function () {
-        (w = 0), I.reset(), re(k), re(K), re(q);
+        (w = 0), tileRender.reset(), re(k), re(K), re(q);
       },
       getTotalSamplesRendered: () => w,
       setfullSampleCallbackCallBack(e) {
@@ -3630,6 +3713,7 @@ var __defProp = Object.defineProperty,
       setDemodulateAlbedo: $,
     };
   }
+
   class he extends t.Light {
     constructor(e, a, n = 10, i = 10) {
       super(e, a),

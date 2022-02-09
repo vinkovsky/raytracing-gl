@@ -74,40 +74,18 @@ var __defProp = Object.defineProperty,
   }
   var n = a(t);
 
-  const fnNameMatcher = /([^(]+)@|at ([^(]+) \(/;
-
-  function fnName(str) {
-    const regexResult = fnNameMatcher.exec(str);
-    return regexResult[1] || regexResult[2];
-  }
-
-  function log(...messages) {
-    const logLines = new Error().stack.split("\n");
-    const callerName = fnName(logLines[1]);
-
-    if (callerName !== null) {
-      if (callerName !== "log") {
-        console.log(callerName, "called log with:", ...messages);
-      } else {
-        console.log(fnName(logLines[2]), "called log with:", ...messages);
-      }
-    } else {
-      console.log(...messages);
-    }
-  }
-
   //fullscreenQuad.vert
   var fullscreenQuad = {
     source: `
- layout(location = 0) in vec2 a_position;
+      layout(location = 0) in vec2 a_position;
 
- out vec2 vCoord;
+      out vec2 vCoord;
 
- void main() {
-   vCoord = a_position;
-   gl_Position = vec4(2. * a_position - 1., 0, 1);
- }
-`,
+      void main() {
+        vCoord = a_position;
+        gl_Position = vec4(2. * a_position - 1., 0, 1);
+      }
+      `,
   };
 
   //glUtils
@@ -1271,23 +1249,6 @@ var __defProp = Object.defineProperty,
     }
     return indices;
   }
-
-  // function b(...e) {
-  //   let t = 0;
-  //   for (let n = 0; n < e.length; n++) {
-  //     const a = e[n],
-  //       i = a.data ? a.data.length / a.channels : 0;
-  //     t = Math.max(t, i);
-  //   }
-
-  //   const a = [];
-  //   for (let n = 0; n < t; n++)
-  //     for (let t = 0; t < e.length; t++) {
-  //       const { data: i = [], channels: o } = e[t];
-  //       for (let e = 0; e < o; e++) a.push(i[n * o + e]);
-  //     }
-  //   return a;
-  // }
 
   // RayTracingRenderer
 
@@ -2738,131 +2699,191 @@ var __defProp = Object.defineProperty,
       source:
         "\n#define PI 3.14159265359\n#define TWOPI 6.28318530718\n#define INVPI 0.31830988618\n#define INVPI2 0.10132118364\n#define EPS 0.0001\n#define ONE_MINUS_EPS 0.999999\n#define INF 1000000.0\n#define ROUGHNESS_MIN 0.001\nuniform Materials{vec4 colorAndMaterialType[NUM_MATERIALS];vec4 roughnessMetalnessNormalScale[NUM_MATERIALS];vec4 alphaSpecularTintSheenSheenTint[NUM_MATERIALS];vec4 clearcoaRoughnessSubfaceTransmission[NUM_MATERIALS];vec4 iorAtDistanceAnisotropicWorkflow[NUM_MATERIALS];vec4 extinction[NUM_MATERIALS];vec4 specularColorGlossiness[NUM_MATERIALS];\n#if defined(NUM_DIFFUSE_MAPS) || defined(NUM_NORMAL_MAPS) || defined(NUM_PBR_MAPS)\nivec4 diffuseNormalRoughnessMetalnessMapIndex[NUM_MATERIALS];\n#endif\n#if defined(NUM_EMISSIVE_MAPS) || defined(NUM_PBR_SG_MAPS)\nivec4 emissiveSpecularGlossinessMapIndex[NUM_MATERIALS];\n#endif\n#if defined(NUM_DIFFUSE_MAPS) || defined(NUM_NORMAL_MAPS)\nvec4 diffuseNormalMapSize[NUM_DIFFUSE_NORMAL_MAPS];\n#endif\n#if defined(NUM_PBR_MAPS)\nvec2 pbrMapSize[NUM_PBR_MAPS];\n#else\n#if defined(NUM_PBR_SG_MAPS)\nvec2 pbrMapSize[NUM_PBR_SG_MAPS];\n#else\n#if defined(NUM_EMISSIVE_MAPS)\nvec2 pbrMapSize[NUM_EMISSIVE_MAPS];\n#endif\n#endif\n#endif\n}materials;\n#ifdef NUM_DIFFUSE_MAPS\nuniform mediump sampler2DArray diffuseMap;\n#endif\n#ifdef NUM_NORMAL_MAPS\nuniform mediump sampler2DArray normalMap;\n#endif\n#ifdef NUM_PBR_MAPS\nuniform mediump sampler2DArray pbrMap;\n#endif\n#ifdef NUM_PBR_SG_MAPS\nuniform mediump sampler2DArray pbrSGMap;\n#endif\n#ifdef NUM_EMISSIVE_MAPS\nuniform mediump sampler2DArray emissiveMap;\n#endif\nfloat LGL_p(int materialIndex){return materials.colorAndMaterialType[materialIndex].w;}float LGL_q(int materialIndex){return materials.iorAtDistanceAnisotropicWorkflow[materialIndex].w;}vec3 LGL_r(int materialIndex,vec2 uv){vec3 emissive=vec3(0.0);\n#ifdef NUM_EMISSIVE_MAPS\nint emissiveMapIndex=materials.emissiveSpecularGlossinessMapIndex[materialIndex].x;if(emissiveMapIndex>=0){emissive=texture(emissiveMap,vec3(uv*materials.pbrMapSize[emissiveMapIndex].xy,emissiveMapIndex)).rgb;}\n#endif\nreturn emissive;}vec3 LGL_s(int materialIndex,vec2 uv){vec3 specularColor=materials.specularColorGlossiness[materialIndex].rgb;\n#ifdef NUM_PBR_SG_MAPS\nint specularMapIndex=materials.emissiveSpecularGlossinessMapIndex[materialIndex].y;if(specularMapIndex>=0){vec3 texelSpecular=texture(pbrSGMap,vec3(uv*materials.pbrMapSize[specularMapIndex].xy,specularMapIndex)).rgb;texelSpecular=pow(texelSpecular,vec3(2.2));specularColor*=texelSpecular;}\n#endif\nreturn specularColor;}float LGL_t(int materialIndex,vec2 uv){float glossiness=materials.specularColorGlossiness[materialIndex].a;\n#ifdef NUM_PBR_SG_MAPS\nint glossinessMapIndex=materials.emissiveSpecularGlossinessMapIndex[materialIndex].z;if(glossinessMapIndex>=0){float texelGlossiness=texture(pbrSGMap,vec3(uv*materials.pbrMapSize[glossinessMapIndex].xy,glossinessMapIndex)).a;glossiness*=texelGlossiness;}\n#endif\nreturn glossiness;}float LGL_u(int materialIndex,vec2 uv){float LGL_BG=LGL_q(materialIndex);float roughness=0.0;if(LGL_BG>0.1){roughness=1.0-LGL_t(materialIndex,uv);}else{roughness=materials.roughnessMetalnessNormalScale[materialIndex].x;\n#ifdef NUM_PBR_MAPS\nint roughnessMapIndex=materials.diffuseNormalRoughnessMetalnessMapIndex[materialIndex].z;if(roughnessMapIndex>=0){roughness*=texture(pbrMap,vec3(uv*materials.pbrMapSize[roughnessMapIndex].xy,roughnessMapIndex)).g;}\n#endif\n}return roughness*roughness;}float LGL_v(const vec3 v){return max(v.x,max(v.y,v.z));}float LGL_w(const vec3 specularColor){return LGL_v(specularColor);}vec3 LGL_x(const vec3 baseColor,float metallic){return baseColor*(1.0-metallic);}float LGL_y(int materialIndex,vec2 uv){float LGL_BG=LGL_q(materialIndex);float metalness=0.0;if(LGL_BG>0.1){vec3 specularFactor=LGL_s(materialIndex,uv);metalness=LGL_w(specularFactor);}else{metalness=materials.roughnessMetalnessNormalScale[materialIndex].y;\n#ifdef NUM_PBR_MAPS\nint metalnessMapIndex=materials.diffuseNormalRoughnessMetalnessMapIndex[materialIndex].w;if(metalnessMapIndex>=0){metalness*=texture(pbrMap,vec3(uv*materials.pbrMapSize[metalnessMapIndex].xy,metalnessMapIndex)).b;}\n#endif\n}return metalness;}vec3 LGL_z(int materialIndex,vec2 uv){vec3 color=materials.colorAndMaterialType[materialIndex].rgb;\n#ifdef NUM_DIFFUSE_MAPS\nint diffuseMapIndex=materials.diffuseNormalRoughnessMetalnessMapIndex[materialIndex].x;if(diffuseMapIndex>=0){color*=texture(diffuseMap,vec3(uv*materials.diffuseNormalMapSize[diffuseMapIndex].xy,diffuseMapIndex)).rgb;}\n#endif\nfloat LGL_BG=LGL_q(materialIndex);if(LGL_BG>0.1){vec3 specularFactor=LGL_s(materialIndex,uv);color=LGL_x(color,LGL_w(specularFactor));}return color;}vec3 LGL_AA(int materialIndex,vec2 uv,vec3 normal,vec3 dp1,vec3 dp2,vec2 duv1,vec2 duv2,inout vec3 tangent,inout vec3 bitangent){vec3 dp2perp=cross(dp2,normal);vec3 dp1perp=cross(normal,dp1);vec3 dpdu=dp2perp*duv1.x+dp1perp*duv2.x;vec3 dpdv=dp2perp*duv1.y+dp1perp*duv2.y;float invmax=inversesqrt(max(dot(dpdu,dpdu),dot(dpdv,dpdv)));dpdu*=invmax;dpdv*=invmax;tangent=normalize(dpdu);bitangent=normalize(dpdv);\n#ifdef NUM_NORMAL_MAPS\nint normalMapIndex=materials.diffuseNormalRoughnessMetalnessMapIndex[materialIndex].y;if(normalMapIndex>=0){vec3 n=2.0*texture(normalMap,vec3(uv*materials.diffuseNormalMapSize[normalMapIndex].zw,normalMapIndex)).rgb-1.0;n.xy*=materials.roughnessMetalnessNormalScale[materialIndex].zw;mat3 tbn=mat3(dpdu,dpdv,normal);return normalize(tbn*n);}else{return normal;}\n#endif\nreturn normal;}float LGL_AD(int materialIndex,vec2 uv){float alpha=materials.alphaSpecularTintSheenSheenTint[materialIndex].x;\n#ifdef NUM_DIFFUSE_MAPS\nint diffuseMapIndex=materials.diffuseNormalRoughnessMetalnessMapIndex[materialIndex].x;if(diffuseMapIndex>=0){alpha*=texture(diffuseMap,vec3(uv*materials.diffuseNormalMapSize[diffuseMapIndex].xy,diffuseMapIndex)).a;}\n#endif\nreturn alpha;}float LGL_AB(int materialIndex){return materials.alphaSpecularTintSheenSheenTint[materialIndex].y;}float LGL_AC(int materialIndex){return materials.alphaSpecularTintSheenSheenTint[materialIndex].z;}float LGL_ACTint(int materialIndex){return materials.alphaSpecularTintSheenSheenTint[materialIndex].w;}float LGL_AF(int materialIndex){return materials.clearcoaRoughnessSubfaceTransmission[materialIndex].x;}float LGL_AFRoughness(int materialIndex){return materials.clearcoaRoughnessSubfaceTransmission[materialIndex].y;}float LGL_AH(int materialIndex){return materials.clearcoaRoughnessSubfaceTransmission[materialIndex].z;}float LGL_AI(int materialIndex){return materials.clearcoaRoughnessSubfaceTransmission[materialIndex].w;}float LGL_AJ(int materialIndex){return materials.iorAtDistanceAnisotropicWorkflow[materialIndex].x;}float LGL_AK(int materialIndex){return materials.iorAtDistanceAnisotropicWorkflow[materialIndex].y;}float LGL_AL(int materialIndex){return materials.iorAtDistanceAnisotropicWorkflow[materialIndex].z;}vec3 LGL_AM(int materialIndex){return materials.extinction[materialIndex].rgb;}layout(location=0)out vec4 out_position;layout(location=1)out vec4 out_normal;layout(location=2)out vec4 out_color;in vec3 vPosition;in vec3 vNormal;in vec2 vUv;flat in ivec2 vMaterialMeshIndex;vec3 LGL_BMs(vec3 pos){vec3 fdx=dFdx(pos);vec3 fdy=dFdy(pos);return cross(fdx,fdy);}void main(){int materialIndex=vMaterialMeshIndex.x;int meshIndex=vMaterialMeshIndex.y;vec2 uv=fract(vUv);vec3 color=LGL_z(materialIndex,uv);float LGL_BH=LGL_p(materialIndex);vec3 normal=normalize(vNormal);vec3 LGL_BM=normalize(LGL_BMs(vPosition));normal*=sign(dot(normal,LGL_BM));\n#ifdef NUM_NORMAL_MAPS\nvec3 dp1=dFdx(vPosition);vec3 dp2=dFdy(vPosition);vec2 duv1=dFdx(vUv);vec2 duv2=dFdy(vUv);vec3 tangent,bitangent;normal=LGL_AA(materialIndex,uv,normal,dp1,dp2,duv1,duv2,tangent,bitangent);\n#endif\nout_position=vec4(vPosition,float(meshIndex)+EPS);out_normal=vec4(normal,LGL_BH);out_color=vec4(color,0.);}",
     };
-  function re(e, t, a) {
-    if (void 0 === t) return;
-    const { itemSize: n, array: i } = a;
-    if (
-      (e.enableVertexAttribArray(t),
-      e.bindBuffer(e.ARRAY_BUFFER, e.createBuffer()),
-      e.bufferData(e.ARRAY_BUFFER, i, e.STATIC_DRAW),
-      i instanceof Float32Array)
-    )
-      e.vertexAttribPointer(t, n, e.FLOAT, !1, 0, 0);
-    else {
-      if (!(i instanceof Int32Array)) throw "Unsupported buffer type";
-      e.vertexAttribIPointer(t, n, e.INT, 0, 0);
+
+  function setAttribute(gl, location, bufferAttribute) {
+    if (location === undefined) {
+      return;
+    }
+
+    const { itemSize, array } = bufferAttribute;
+
+    gl.enableVertexAttribArray(location);
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+    gl.bufferData(gl.ARRAY_BUFFER, array, gl.STATIC_DRAW);
+
+    if (array instanceof Float32Array) {
+      gl.vertexAttribPointer(location, itemSize, gl.FLOAT, false, 0, 0);
+    } else if (array instanceof Int32Array) {
+      gl.vertexAttribIPointer(location, itemSize, gl.INT, 0, 0);
+    } else {
+      throw "Unsupported buffer type";
     }
   }
-  function se(e, { materialBuffer: a, mergedMesh: n }) {
-    const i = makeRenderPass(e, {
-      defines: a.defines,
+
+  function uploadAttributes(gl, renderPass, geometry) {
+    setAttribute(
+      gl,
+      renderPass.attribLocs.aPosition,
+      geometry.getAttribute("position")
+    );
+    setAttribute(
+      gl,
+      renderPass.attribLocs.aNormal,
+      geometry.getAttribute("normal")
+    );
+    setAttribute(gl, renderPass.attribLocs.aUv, geometry.getAttribute("uv"));
+    setAttribute(
+      gl,
+      renderPass.attribLocs.aMaterialMeshIndex,
+      geometry.getAttribute("materialMeshIndex")
+    );
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, gl.createBuffer());
+    gl.bufferData(
+      gl.ELEMENT_ARRAY_BUFFER,
+      geometry.getIndex().array,
+      gl.STATIC_DRAW
+    );
+  }
+
+  function makeGBufferPass(gl, { materialBuffer, mergedMesh }) {
+    const renderPass = makeRenderPass(gl, {
+      defines: materialBuffer.defines,
       vertex: ie,
       fragment: oe,
     });
-    i.setTexture("diffuseMap", a.textures.diffuseMap),
-      i.setTexture("normalMap", a.textures.normalMap);
-    const o = n.geometry,
-      r = o.getIndex().count,
-      s = e.createVertexArray();
-    e.bindVertexArray(s),
-      (function (e, t, a) {
-        re(e, t.attribLocs.aPosition, a.getAttribute("position")),
-          re(e, t.attribLocs.aNormal, a.getAttribute("normal")),
-          re(e, t.attribLocs.aUv, a.getAttribute("uv")),
-          re(
-            e,
-            t.attribLocs.aMaterialMeshIndex,
-            a.getAttribute("materialMeshIndex")
-          ),
-          e.bindBuffer(e.ELEMENT_ARRAY_BUFFER, e.createBuffer()),
-          e.bufferData(
-            e.ELEMENT_ARRAY_BUFFER,
-            a.getIndex().array,
-            e.STATIC_DRAW
-          );
-      })(e, i, o),
-      e.bindVertexArray(null);
-    let l,
-      f = 0,
-      d = 0;
-    let c = new t.Matrix4();
+
+    renderPass.setTexture("diffuseMap", materialBuffer.textures.diffuseMap);
+    renderPass.setTexture("normalMap", materialBuffer.textures.normalMap);
+
+    const geometry = mergedMesh.geometry;
+
+    const elementCount = geometry.getIndex().count;
+
+    const vao = gl.createVertexArray();
+
+    gl.bindVertexArray(vao);
+    uploadAttributes(gl, renderPass, geometry);
+    gl.bindVertexArray(null);
+
+    let jitterX = 0;
+    let jitterY = 0;
+
+    function setJitter(x, t) {
+      jitterX = x;
+      jitterY = t;
+    }
+
+    let currentCamera;
+
+    function setCamera(camera) {
+      currentCamera = camera;
+    }
+
+    function calcCamera() {
+      projView.copy(currentCamera.projectionMatrix);
+
+      projView.elements[8] += 2 * jitterX;
+      projView.elements[9] += 2 * jitterY;
+
+      projView.multiply(currentCamera.matrixWorldInverse);
+    }
+
+    let projView = new THREE.Matrix4();
+
+    function draw() {
+      calcCamera();
+      renderPass.setUniform("projView", projView.elements);
+      gl.bindVertexArray(vao);
+      renderPass.useProgram();
+      gl.enable(gl.DEPTH_TEST);
+      gl.drawElements(gl.TRIANGLES, elementCount, gl.UNSIGNED_INT, 0);
+      gl.disable(gl.DEPTH_TEST);
+    }
+
     return {
-      draw: function () {
-        c.copy(l.projectionMatrix),
-          (c.elements[8] += 2 * f),
-          (c.elements[9] += 2 * d),
-          c.multiply(l.matrixWorldInverse),
-          i.setUniform("projView", c.elements),
-          e.bindVertexArray(s),
-          i.useProgram(),
-          e.enable(e.DEPTH_TEST),
-          e.drawElements(e.TRIANGLES, r, e.UNSIGNED_INT, 0),
-          e.disable(e.DEPTH_TEST);
-      },
-      outputLocs: i.outputLocs,
-      setCamera: function (e) {
-        l = e;
-      },
-      setJitter: function (e, t) {
-        (f = e), (d = t);
-      },
+      draw,
+      outputLocs: renderPass.outputLocs,
+      setCamera,
+      setJitter,
     };
   }
+
   var le = {
     source:
       "vec4 LGL_An(sampler2D map,vec2 uv){\n#ifdef OES_texture_float_linear\nreturn texture(map,uv);\n#else\nvec2 size=vec2(textureSize(map,0));vec2 texelSize=1.0/size;uv=uv*size-0.5;vec2 f=fract(uv);uv=floor(uv)+0.5;vec4 s1=texture(map,(uv+vec2(0,0))*texelSize);vec4 s2=texture(map,(uv+vec2(1,0))*texelSize);vec4 s3=texture(map,(uv+vec2(0,1))*texelSize);vec4 s4=texture(map,(uv+vec2(1,1))*texelSize);return mix(mix(s1,s2,f.x),mix(s3,s4,f.x),f.y);\n#endif\n}layout(location=0)out vec4 out_color;in vec2 vCoord;uniform sampler2D lightTex;uniform vec2 lightScale;uniform int toneMappingFun;vec3 linear(vec3 color){return color;}vec3 LGL_Av(vec3 color){return clamp(color/(vec3(1.0)+color),vec3(0.0),vec3(1.0));}vec3 LGL_Aw(vec3 color){color=max(vec3(0.0),color-0.004);return pow((color*(6.2*color+0.5))/(color*(6.2*color+1.7)+0.06),vec3(2.2));}vec3 LGL_Ax(vec3 color){return clamp((color*(2.51*color+0.03))/(color*(2.43*color+0.59)+0.14),vec3(0.0),vec3(1.0));}void main(){vec4 upscaledLight=texture(lightTex,lightScale*vCoord);vec3 light=upscaledLight.rgb/upscaledLight.a;if(toneMappingFun==0){light=linear(light);}if(toneMappingFun==1){light=LGL_Ax(light);}if(toneMappingFun==2){light=LGL_Av(light);}if(toneMappingFun==3){light=LGL_Aw(light);}light=pow(light,vec3(1.0/2.2));if(upscaledLight.a==0.){out_color=vec4(light,0.0);}else{out_color=vec4(light,1.0);}}",
   };
-  const fe = {
-    [n.LinearToneMapping]: 0,
-    [n.ACESFilmicToneMapping]: 1,
-    [n.ReinhardToneMapping]: 2,
-    [n.CineonToneMapping]: 3,
+
+  const toneMapFunctions = {
+    [THREE.LinearToneMapping]: 0,
+    [THREE.ACESFilmicToneMapping]: 1,
+    [THREE.ReinhardToneMapping]: 2,
+    [THREE.CineonToneMapping]: 3,
   };
-  function de(e, t) {
-    const { fullscreenQuad: a, toneMapping: i } = t;
-    let o;
-    const r = { gl: e, vertex: a.vertexShader, fragment: le },
-      s = makeRenderPass(e, r);
-    s.setUniform("toneMappingFun", fe[i]);
-    const f = new n.Vector2(1, 1);
+
+  function makeToneMapPass(gl, params) {
+    const { fullscreenQuad, toneMapping } = params;
+
+    let frameBuffer;
+
+    const renderPassConfig = {
+      gl,
+      vertex: fullscreenQuad.vertexShader,
+      fragment: le,
+    };
+
+    const renderPass = makeRenderPass(gl, renderPassConfig);
+
+    renderPass.setUniform("toneMappingFun", toneMapFunctions[toneMapping]);
+
+    const defaultLightScale = new THREE.Vector2(1, 1);
+
+    function draw(params, isDraw) {
+      let { light, lightScale } = params;
+
+      lightScale = lightScale || defaultLightScale;
+      renderPass.setTexture("lightTex", light);
+      renderPass.setUniform("lightScale", lightScale.x, lightScale.y);
+
+      if (isDraw) {
+        frameBuffer.bind();
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
+        renderPass.useProgram();
+        fullscreenQuad.draw();
+        frameBuffer.unbind();
+
+        return frameBuffer;
+      }
+
+      renderPass.useProgram();
+      fullscreenQuad.draw();
+    }
+
+    function setToneMapping(toneMapIndex) {
+      renderPass.setUniform("toneMappingFun", toneMapFunctions[toneMapIndex]);
+    }
+
+    function setSize(width, height) {
+      frameBuffer = makeFramebuffer(gl, {
+        color: {
+          0: makeTexture(gl, {
+            width,
+            height,
+            storage: "byte",
+            magFilter: gl.LINEAR,
+            minFilter: gl.LINEAR,
+          }),
+        },
+      });
+    }
+
     return {
-      draw: function (t, n) {
-        let { light: i, lightScale: r } = t;
-        if (
-          ((r = r || f),
-          s.setTexture("lightTex", i),
-          s.setUniform("lightScale", r.x, r.y),
-          n)
-        )
-          return (
-            o.bind(),
-            e.clear(e.COLOR_BUFFER_BIT),
-            e.viewport(0, 0, e.drawingBufferWidth, e.drawingBufferHeight),
-            s.useProgram(),
-            a.draw(),
-            o.unbind(),
-            o
-          );
-        s.useProgram(), a.draw();
-      },
-      setToneMapping: function (e) {
-        s.setUniform("toneMappingFun", fe[e]);
-      },
-      setSize: function (t, a) {
-        o = makeFramebuffer(e, {
-          color: {
-            0: makeTexture(e, {
-              width: t,
-              height: a,
-              storage: "byte",
-              magFilter: e.LINEAR,
-              minFilter: e.LINEAR,
-            }),
-          },
-        });
-      },
+      draw,
+      setToneMapping,
+      setSize,
     };
   }
+
   var ce = {
     source:
       "layout(location=0)out vec4 out_color;uniform sampler2D inputBuffer;uniform vec2 resolution;in vec2 vCoord;\n#define FXAA_PC 1\n#define FXAA_GLSL_100 1\n#define FXAA_QUALITY_PRESET 12\n#define FXAA_GREEN_AS_LUMA 1\n#ifndef FXAA_PC_CONSOLE\n#define FXAA_PC_CONSOLE 0\n#endif\n#ifndef FXAA_GLSL_120\n#define FXAA_GLSL_120 0\n#endif\n#ifndef FXAA_GLSL_130\n#define FXAA_GLSL_130 0\n#endif\n#ifndef FXAA_HLSL_3\n#define FXAA_HLSL_3 0\n#endif\n#ifndef FXAA_HLSL_4\n#define FXAA_HLSL_4 0\n#endif\n#ifndef FXAA_HLSL_5\n#define FXAA_HLSL_5 0\n#endif\n#ifndef FXAA_GREEN_AS_LUMA\n#define FXAA_GREEN_AS_LUMA 0\n#endif\n#ifndef FXAA_EARLY_EXIT\n#define FXAA_EARLY_EXIT 1\n#endif\n#ifndef FXAA_DISCARD\n#define FXAA_DISCARD 0\n#endif\n#ifndef FXAA_FAST_PIXEL_OFFSET\n#ifdef GL_EXT_gpu_shader4\n#define FXAA_FAST_PIXEL_OFFSET 1\n#endif\n#ifdef GL_NV_gpu_shader5\n#define FXAA_FAST_PIXEL_OFFSET 1\n#endif\n#ifdef GL_ARB_gpu_shader5\n#define FXAA_FAST_PIXEL_OFFSET 1\n#endif\n#ifndef FXAA_FAST_PIXEL_OFFSET\n#define FXAA_FAST_PIXEL_OFFSET 0\n#endif\n#endif\n#ifndef FXAA_GATHER4_ALPHA\n#if (FXAA_HLSL_5 == 1)\n#define FXAA_GATHER4_ALPHA 1\n#endif\n#ifdef GL_ARB_gpu_shader5\n#define FXAA_GATHER4_ALPHA 1\n#endif\n#ifdef GL_NV_gpu_shader5\n#define FXAA_GATHER4_ALPHA 1\n#endif\n#ifndef FXAA_GATHER4_ALPHA\n#define FXAA_GATHER4_ALPHA 0\n#endif\n#endif\n/*============================================================================FXAA QUALITY-TUNING KNOBS------------------------------------------------------------------------------NOTE the other tuning knobs are now in the shader function inputs!============================================================================*/\n#ifndef FXAA_QUALITY_PRESET\n#define FXAA_QUALITY_PRESET 12\n#endif\n/*============================================================================FXAA QUALITY-PRESETS============================================================================*//*============================================================================FXAA QUALITY-MEDIUM DITHER PRESETS============================================================================*/\n#if (FXAA_QUALITY_PRESET == 10)\n#define FXAA_QUALITY_PS 3\n#define FXAA_QUALITY_P0 1.5\n#define FXAA_QUALITY_P1 3.0\n#define FXAA_QUALITY_P2 12.0\n#endif\n#if (FXAA_QUALITY_PRESET == 11)\n#define FXAA_QUALITY_PS 4\n#define FXAA_QUALITY_P0 1.0\n#define FXAA_QUALITY_P1 1.5\n#define FXAA_QUALITY_P2 3.0\n#define FXAA_QUALITY_P3 12.0\n#endif\n#if (FXAA_QUALITY_PRESET == 12)\n#define FXAA_QUALITY_PS 5\n#define FXAA_QUALITY_P0 1.0\n#define FXAA_QUALITY_P1 1.5\n#define FXAA_QUALITY_P2 2.0\n#define FXAA_QUALITY_P3 4.0\n#define FXAA_QUALITY_P4 12.0\n#endif\n#if (FXAA_QUALITY_PRESET == 13)\n#define FXAA_QUALITY_PS 6\n#define FXAA_QUALITY_P0 1.0\n#define FXAA_QUALITY_P1 1.5\n#define FXAA_QUALITY_P2 2.0\n#define FXAA_QUALITY_P3 2.0\n#define FXAA_QUALITY_P4 4.0\n#define FXAA_QUALITY_P5 12.0\n#endif\n#if (FXAA_QUALITY_PRESET == 14)\n#define FXAA_QUALITY_PS 7\n#define FXAA_QUALITY_P0 1.0\n#define FXAA_QUALITY_P1 1.5\n#define FXAA_QUALITY_P2 2.0\n#define FXAA_QUALITY_P3 2.0\n#define FXAA_QUALITY_P4 2.0\n#define FXAA_QUALITY_P5 4.0\n#define FXAA_QUALITY_P6 12.0\n#endif\n#if (FXAA_QUALITY_PRESET == 15)\n#define FXAA_QUALITY_PS 8\n#define FXAA_QUALITY_P0 1.0\n#define FXAA_QUALITY_P1 1.5\n#define FXAA_QUALITY_P2 2.0\n#define FXAA_QUALITY_P3 2.0\n#define FXAA_QUALITY_P4 2.0\n#define FXAA_QUALITY_P5 2.0\n#define FXAA_QUALITY_P6 4.0\n#define FXAA_QUALITY_P7 12.0\n#endif\n/*============================================================================FXAA QUALITY-LOW DITHER PRESETS============================================================================*/\n#if (FXAA_QUALITY_PRESET == 20)\n#define FXAA_QUALITY_PS 3\n#define FXAA_QUALITY_P0 1.5\n#define FXAA_QUALITY_P1 2.0\n#define FXAA_QUALITY_P2 8.0\n#endif\n#if (FXAA_QUALITY_PRESET == 21)\n#define FXAA_QUALITY_PS 4\n#define FXAA_QUALITY_P0 1.0\n#define FXAA_QUALITY_P1 1.5\n#define FXAA_QUALITY_P2 2.0\n#define FXAA_QUALITY_P3 8.0\n#endif\n#if (FXAA_QUALITY_PRESET == 22)\n#define FXAA_QUALITY_PS 5\n#define FXAA_QUALITY_P0 1.0\n#define FXAA_QUALITY_P1 1.5\n#define FXAA_QUALITY_P2 2.0\n#define FXAA_QUALITY_P3 2.0\n#define FXAA_QUALITY_P4 8.0\n#endif\n#if (FXAA_QUALITY_PRESET == 23)\n#define FXAA_QUALITY_PS 6\n#define FXAA_QUALITY_P0 1.0\n#define FXAA_QUALITY_P1 1.5\n#define FXAA_QUALITY_P2 2.0\n#define FXAA_QUALITY_P3 2.0\n#define FXAA_QUALITY_P4 2.0\n#define FXAA_QUALITY_P5 8.0\n#endif\n#if (FXAA_QUALITY_PRESET == 24)\n#define FXAA_QUALITY_PS 7\n#define FXAA_QUALITY_P0 1.0\n#define FXAA_QUALITY_P1 1.5\n#define FXAA_QUALITY_P2 2.0\n#define FXAA_QUALITY_P3 2.0\n#define FXAA_QUALITY_P4 2.0\n#define FXAA_QUALITY_P5 3.0\n#define FXAA_QUALITY_P6 8.0\n#endif\n#if (FXAA_QUALITY_PRESET == 25)\n#define FXAA_QUALITY_PS 8\n#define FXAA_QUALITY_P0 1.0\n#define FXAA_QUALITY_P1 1.5\n#define FXAA_QUALITY_P2 2.0\n#define FXAA_QUALITY_P3 2.0\n#define FXAA_QUALITY_P4 2.0\n#define FXAA_QUALITY_P5 2.0\n#define FXAA_QUALITY_P6 4.0\n#define FXAA_QUALITY_P7 8.0\n#endif\n#if (FXAA_QUALITY_PRESET == 26)\n#define FXAA_QUALITY_PS 9\n#define FXAA_QUALITY_P0 1.0\n#define FXAA_QUALITY_P1 1.5\n#define FXAA_QUALITY_P2 2.0\n#define FXAA_QUALITY_P3 2.0\n#define FXAA_QUALITY_P4 2.0\n#define FXAA_QUALITY_P5 2.0\n#define FXAA_QUALITY_P6 2.0\n#define FXAA_QUALITY_P7 4.0\n#define FXAA_QUALITY_P8 8.0\n#endif\n#if (FXAA_QUALITY_PRESET == 27)\n#define FXAA_QUALITY_PS 10\n#define FXAA_QUALITY_P0 1.0\n#define FXAA_QUALITY_P1 1.5\n#define FXAA_QUALITY_P2 2.0\n#define FXAA_QUALITY_P3 2.0\n#define FXAA_QUALITY_P4 2.0\n#define FXAA_QUALITY_P5 2.0\n#define FXAA_QUALITY_P6 2.0\n#define FXAA_QUALITY_P7 2.0\n#define FXAA_QUALITY_P8 4.0\n#define FXAA_QUALITY_P9 8.0\n#endif\n#if (FXAA_QUALITY_PRESET == 28)\n#define FXAA_QUALITY_PS 11\n#define FXAA_QUALITY_P0 1.0\n#define FXAA_QUALITY_P1 1.5\n#define FXAA_QUALITY_P2 2.0\n#define FXAA_QUALITY_P3 2.0\n#define FXAA_QUALITY_P4 2.0\n#define FXAA_QUALITY_P5 2.0\n#define FXAA_QUALITY_P6 2.0\n#define FXAA_QUALITY_P7 2.0\n#define FXAA_QUALITY_P8 2.0\n#define FXAA_QUALITY_P9 4.0\n#define FXAA_QUALITY_P10 8.0\n#endif\n#if (FXAA_QUALITY_PRESET == 29)\n#define FXAA_QUALITY_PS 12\n#define FXAA_QUALITY_P0 1.0\n#define FXAA_QUALITY_P1 1.5\n#define FXAA_QUALITY_P2 2.0\n#define FXAA_QUALITY_P3 2.0\n#define FXAA_QUALITY_P4 2.0\n#define FXAA_QUALITY_P5 2.0\n#define FXAA_QUALITY_P6 2.0\n#define FXAA_QUALITY_P7 2.0\n#define FXAA_QUALITY_P8 2.0\n#define FXAA_QUALITY_P9 2.0\n#define FXAA_QUALITY_P10 4.0\n#define FXAA_QUALITY_P11 8.0\n#endif\n/*============================================================================FXAA QUALITY-EXTREME QUALITY============================================================================*/\n#if (FXAA_QUALITY_PRESET == 39)\n#define FXAA_QUALITY_PS 12\n#define FXAA_QUALITY_P0 1.0\n#define FXAA_QUALITY_P1 1.0\n#define FXAA_QUALITY_P2 1.0\n#define FXAA_QUALITY_P3 1.0\n#define FXAA_QUALITY_P4 1.0\n#define FXAA_QUALITY_P5 1.5\n#define FXAA_QUALITY_P6 2.0\n#define FXAA_QUALITY_P7 2.0\n#define FXAA_QUALITY_P8 2.0\n#define FXAA_QUALITY_P9 2.0\n#define FXAA_QUALITY_P10 4.0\n#define FXAA_QUALITY_P11 8.0\n#endif\n/*============================================================================API PORTING============================================================================*/\n#if (FXAA_GLSL_100 == 1) || (FXAA_GLSL_120 == 1) || (FXAA_GLSL_130 == 1)\n#define FxaaBool bool\n#define FxaaDiscard discard\n#define FxaaFloat float\n#define FxaaFloat2 vec2\n#define FxaaFloat3 vec3\n#define FxaaFloat4 vec4\n#define FxaaHalf float\n#define FxaaHalf2 vec2\n#define FxaaHalf3 vec3\n#define FxaaHalf4 vec4\n#define FxaaInt2 ivec2\n#define FxaaSat(x) clamp(x, 0.0, 1.0)\n#define FxaaTex sampler2D\n#else\n#define FxaaBool bool\n#define FxaaDiscard clip(-1)\n#define FxaaFloat float\n#define FxaaFloat2 float2\n#define FxaaFloat3 float3\n#define FxaaFloat4 float4\n#define FxaaHalf half\n#define FxaaHalf2 half2\n#define FxaaHalf3 half3\n#define FxaaHalf4 half4\n#define FxaaSat(x) saturate(x)\n#endif\n#if (FXAA_GLSL_100 == 1)\n#define FxaaTexTop(t, p) texture(t, p, 0.0)\n#define FxaaTexOff(t, p, o, r) texture(t, p + (o * r), 0.0)\n#endif\n#if (FXAA_GLSL_120 == 1)\n#define FxaaTexTop(t, p) textureLod(t, p, 0.0)\n#if (FXAA_FAST_PIXEL_OFFSET == 1)\n#define FxaaTexOff(t, p, o, r) textureLodOffset(t, p, 0.0, o)\n#else\n#define FxaaTexOff(t, p, o, r) textureLod(t, p + (o * r), 0.0)\n#endif\n#if (FXAA_GATHER4_ALPHA == 1)\n#define FxaaTexAlpha4(t, p) textureGather(t, p, 3)\n#define FxaaTexOffAlpha4(t, p, o) textureGatherOffset(t, p, o, 3)\n#define FxaaTexGreen4(t, p) textureGather(t, p, 1)\n#define FxaaTexOffGreen4(t, p, o) textureGatherOffset(t, p, o, 1)\n#endif\n#endif\n#if (FXAA_GLSL_130 == 1)\n#define FxaaTexTop(t, p) textureLod(t, p, 0.0)\n#define FxaaTexOff(t, p, o, r) textureLodOffset(t, p, 0.0, o)\n#if (FXAA_GATHER4_ALPHA == 1)\n#define FxaaTexAlpha4(t, p) textureGather(t, p, 3)\n#define FxaaTexOffAlpha4(t, p, o) textureGatherOffset(t, p, o, 3)\n#define FxaaTexGreen4(t, p) textureGather(t, p, 1)\n#define FxaaTexOffGreen4(t, p, o) textureGatherOffset(t, p, o, 1)\n#endif\n#endif\n#if (FXAA_HLSL_3 == 1)\n#define FxaaInt2 float2\n#define FxaaTex sampler2D\n#define FxaaTexTop(t, p) tex2Dlod(t, float4(p, 0.0, 0.0))\n#define FxaaTexOff(t, p, o, r) tex2Dlod(t, float4(p + (o * r), 0, 0))\n#endif\n#if (FXAA_HLSL_4 == 1)\n#define FxaaInt2 int2\nstruct FxaaTex{SamplerState smpl;texture tex;};\n#define FxaaTexTop(t, p) t.tex.SampleLevel(t.smpl, p, 0.0)\n#define FxaaTexOff(t, p, o, r) t.tex.SampleLevel(t.smpl, p, 0.0, o)\n#endif\n#if (FXAA_HLSL_5 == 1)\n#define FxaaInt2 int2\nstruct FxaaTex{SamplerState smpl;texture tex;};\n#define FxaaTexTop(t, p) t.tex.SampleLevel(t.smpl, p, 0.0)\n#define FxaaTexOff(t, p, o, r) t.tex.SampleLevel(t.smpl, p, 0.0, o)\n#define FxaaTexAlpha4(t, p) t.tex.GatherAlpha(t.smpl, p)\n#define FxaaTexOffAlpha4(t, p, o) t.tex.GatherAlpha(t.smpl, p, o)\n#define FxaaTexGreen4(t, p) t.tex.GatherGreen(t.smpl, p)\n#define FxaaTexOffGreen4(t, p, o) t.tex.GatherGreen(t.smpl, p, o)\n#endif\n/*============================================================================GREEN AS LUMA OPTION SUPPORT FUNCTION============================================================================*/\n#if (FXAA_GREEN_AS_LUMA == 0)\nFxaaFloat FxaaLuma(FxaaFloat4 rgba){return rgba.w;}\n#else\nFxaaFloat FxaaLuma(FxaaFloat4 rgba){return rgba.y;}\n#endif\n/*============================================================================FXAA3 QUALITY-PC============================================================================*/\n#if (FXAA_PC == 1)\nFxaaFloat4 FxaaPixelShader(FxaaFloat2 pos,FxaaFloat4 fxaaConsolePosPos,FxaaTex tex,FxaaTex fxaaConsole360TexExpBiasNegOne,FxaaTex fxaaConsole360TexExpBiasNegTwo,FxaaFloat2 fxaaQualityRcpFrame,FxaaFloat4 fxaaConsoleRcpFrameOpt,FxaaFloat4 fxaaConsoleRcpFrameOpt2,FxaaFloat4 fxaaConsole360RcpFrameOpt2,FxaaFloat fxaaQualitySubpix,FxaaFloat fxaaQualityEdgeThreshold,FxaaFloat fxaaQualityEdgeThresholdMin,FxaaFloat fxaaConsoleEdgeSharpness,FxaaFloat fxaaConsoleEdgeThreshold,FxaaFloat fxaaConsoleEdgeThresholdMin,FxaaFloat4 fxaaConsole360ConstDir){FxaaFloat2 posM;posM.x=pos.x;posM.y=pos.y;\n#if (FXAA_GATHER4_ALPHA == 1)\n#if (FXAA_DISCARD == 0)\nFxaaFloat4 rgbyM=FxaaTexTop(tex,posM);\n#if (FXAA_GREEN_AS_LUMA == 0)\n#define lumaM rgbyM.w\n#else\n#define lumaM rgbyM.y\n#endif\n#endif\n#if (FXAA_GREEN_AS_LUMA == 0)\nFxaaFloat4 luma4A=FxaaTexAlpha4(tex,posM);FxaaFloat4 luma4B=FxaaTexOffAlpha4(tex,posM,FxaaInt2(-1,-1));\n#else\nFxaaFloat4 luma4A=FxaaTexGreen4(tex,posM);FxaaFloat4 luma4B=FxaaTexOffGreen4(tex,posM,FxaaInt2(-1,-1));\n#endif\n#if (FXAA_DISCARD == 1)\n#define lumaM luma4A.w\n#endif\n#define lumaE luma4A.z\n#define lumaS luma4A.x\n#define lumaSE luma4A.y\n#define lumaNW luma4B.w\n#define lumaN luma4B.z\n#define lumaW luma4B.x\n#else\nFxaaFloat4 rgbyM=FxaaTexTop(tex,posM);\n#if (FXAA_GREEN_AS_LUMA == 0)\n#define lumaM rgbyM.w\n#else\n#define lumaM rgbyM.y\n#endif\n#if (FXAA_GLSL_100 == 1)\nFxaaFloat lumaS=FxaaLuma(FxaaTexOff(tex,posM,FxaaFloat2(0.0,1.0),fxaaQualityRcpFrame.xy));FxaaFloat lumaE=FxaaLuma(FxaaTexOff(tex,posM,FxaaFloat2(1.0,0.0),fxaaQualityRcpFrame.xy));FxaaFloat lumaN=FxaaLuma(FxaaTexOff(tex,posM,FxaaFloat2(0.0,-1.0),fxaaQualityRcpFrame.xy));FxaaFloat lumaW=FxaaLuma(FxaaTexOff(tex,posM,FxaaFloat2(-1.0,0.0),fxaaQualityRcpFrame.xy));\n#else\nFxaaFloat lumaS=FxaaLuma(FxaaTexOff(tex,posM,FxaaInt2(0,1),fxaaQualityRcpFrame.xy));FxaaFloat lumaE=FxaaLuma(FxaaTexOff(tex,posM,FxaaInt2(1,0),fxaaQualityRcpFrame.xy));FxaaFloat lumaN=FxaaLuma(FxaaTexOff(tex,posM,FxaaInt2(0,-1),fxaaQualityRcpFrame.xy));FxaaFloat lumaW=FxaaLuma(FxaaTexOff(tex,posM,FxaaInt2(-1,0),fxaaQualityRcpFrame.xy));\n#endif\n#endif\nFxaaFloat maxSM=max(lumaS,lumaM);FxaaFloat minSM=min(lumaS,lumaM);FxaaFloat maxESM=max(lumaE,maxSM);FxaaFloat minESM=min(lumaE,minSM);FxaaFloat maxWN=max(lumaN,lumaW);FxaaFloat minWN=min(lumaN,lumaW);FxaaFloat rangeMax=max(maxWN,maxESM);FxaaFloat rangeMin=min(minWN,minESM);FxaaFloat rangeMaxScaled=rangeMax*fxaaQualityEdgeThreshold;FxaaFloat range=rangeMax-rangeMin;FxaaFloat rangeMaxClamped=max(fxaaQualityEdgeThresholdMin,rangeMaxScaled);FxaaBool earlyExit=range<rangeMaxClamped;if(earlyExit)\n#if (FXAA_DISCARD == 1)\nFxaaDiscard;\n#else\nreturn rgbyM;\n#endif\n#if (FXAA_GATHER4_ALPHA == 0)\n#if (FXAA_GLSL_100 == 1)\nFxaaFloat lumaNW=FxaaLuma(FxaaTexOff(tex,posM,FxaaFloat2(-1.0,-1.0),fxaaQualityRcpFrame.xy));FxaaFloat lumaSE=FxaaLuma(FxaaTexOff(tex,posM,FxaaFloat2(1.0,1.0),fxaaQualityRcpFrame.xy));FxaaFloat lumaNE=FxaaLuma(FxaaTexOff(tex,posM,FxaaFloat2(1.0,-1.0),fxaaQualityRcpFrame.xy));FxaaFloat lumaSW=FxaaLuma(FxaaTexOff(tex,posM,FxaaFloat2(-1.0,1.0),fxaaQualityRcpFrame.xy));\n#else\nFxaaFloat lumaNW=FxaaLuma(FxaaTexOff(tex,posM,FxaaInt2(-1,-1),fxaaQualityRcpFrame.xy));FxaaFloat lumaSE=FxaaLuma(FxaaTexOff(tex,posM,FxaaInt2(1,1),fxaaQualityRcpFrame.xy));FxaaFloat lumaNE=FxaaLuma(FxaaTexOff(tex,posM,FxaaInt2(1,-1),fxaaQualityRcpFrame.xy));FxaaFloat lumaSW=FxaaLuma(FxaaTexOff(tex,posM,FxaaInt2(-1,1),fxaaQualityRcpFrame.xy));\n#endif\n#else\nFxaaFloat lumaNE=FxaaLuma(FxaaTexOff(tex,posM,FxaaInt2(1,-1),fxaaQualityRcpFrame.xy));FxaaFloat lumaSW=FxaaLuma(FxaaTexOff(tex,posM,FxaaInt2(-1,1),fxaaQualityRcpFrame.xy));\n#endif\nFxaaFloat lumaNS=lumaN+lumaS;FxaaFloat lumaWE=lumaW+lumaE;FxaaFloat subpixRcpRange=1.0/range;FxaaFloat subpixNSWE=lumaNS+lumaWE;FxaaFloat edgeHorz1=(-2.0*lumaM)+lumaNS;FxaaFloat edgeVert1=(-2.0*lumaM)+lumaWE;FxaaFloat lumaNESE=lumaNE+lumaSE;FxaaFloat lumaNWNE=lumaNW+lumaNE;FxaaFloat edgeHorz2=(-2.0*lumaE)+lumaNESE;FxaaFloat edgeVert2=(-2.0*lumaN)+lumaNWNE;FxaaFloat lumaNWSW=lumaNW+lumaSW;FxaaFloat lumaSWSE=lumaSW+lumaSE;FxaaFloat edgeHorz4=(abs(edgeHorz1)*2.0)+abs(edgeHorz2);FxaaFloat edgeVert4=(abs(edgeVert1)*2.0)+abs(edgeVert2);FxaaFloat edgeHorz3=(-2.0*lumaW)+lumaNWSW;FxaaFloat edgeVert3=(-2.0*lumaS)+lumaSWSE;FxaaFloat edgeHorz=abs(edgeHorz3)+edgeHorz4;FxaaFloat edgeVert=abs(edgeVert3)+edgeVert4;FxaaFloat subpixNWSWNESE=lumaNWSW+lumaNESE;FxaaFloat lengthSign=fxaaQualityRcpFrame.x;FxaaBool horzSpan=edgeHorz>=edgeVert;FxaaFloat subpixA=subpixNSWE*2.0+subpixNWSWNESE;if(!horzSpan)lumaN=lumaW;if(!horzSpan)lumaS=lumaE;if(horzSpan)lengthSign=fxaaQualityRcpFrame.y;FxaaFloat subpixB=(subpixA*(1.0/12.0))-lumaM;FxaaFloat gradientN=lumaN-lumaM;FxaaFloat gradientS=lumaS-lumaM;FxaaFloat lumaNN=lumaN+lumaM;FxaaFloat lumaSS=lumaS+lumaM;FxaaBool pairN=abs(gradientN)>=abs(gradientS);FxaaFloat gradient=max(abs(gradientN),abs(gradientS));if(pairN)lengthSign=-lengthSign;FxaaFloat subpixC=FxaaSat(abs(subpixB)*subpixRcpRange);FxaaFloat2 posB;posB.x=posM.x;posB.y=posM.y;FxaaFloat2 offNP;offNP.x=(!horzSpan)? 0.0 : fxaaQualityRcpFrame.x;offNP.y=(horzSpan)? 0.0 : fxaaQualityRcpFrame.y;if(!horzSpan)posB.x+=lengthSign*0.5;if(horzSpan)posB.y+=lengthSign*0.5;FxaaFloat2 posN;posN.x=posB.x-offNP.x*FXAA_QUALITY_P0;posN.y=posB.y-offNP.y*FXAA_QUALITY_P0;FxaaFloat2 posP;posP.x=posB.x+offNP.x*FXAA_QUALITY_P0;posP.y=posB.y+offNP.y*FXAA_QUALITY_P0;FxaaFloat subpixD=((-2.0)*subpixC)+3.0;FxaaFloat lumaEndN=FxaaLuma(FxaaTexTop(tex,posN));FxaaFloat subpixE=subpixC*subpixC;FxaaFloat lumaEndP=FxaaLuma(FxaaTexTop(tex,posP));if(!pairN)lumaNN=lumaSS;FxaaFloat gradientScaled=gradient*1.0/4.0;FxaaFloat lumaMM=lumaM-lumaNN*0.5;FxaaFloat subpixF=subpixD*subpixE;FxaaBool lumaMLTZero=lumaMM<0.0;lumaEndN-=lumaNN*0.5;lumaEndP-=lumaNN*0.5;FxaaBool doneN=abs(lumaEndN)>=gradientScaled;FxaaBool doneP=abs(lumaEndP)>=gradientScaled;if(!doneN)posN.x-=offNP.x*FXAA_QUALITY_P1;if(!doneN)posN.y-=offNP.y*FXAA_QUALITY_P1;FxaaBool doneNP=(!doneN)||(!doneP);if(!doneP)posP.x+=offNP.x*FXAA_QUALITY_P1;if(!doneP)posP.y+=offNP.y*FXAA_QUALITY_P1;if(doneNP){if(!doneN)lumaEndN=FxaaLuma(FxaaTexTop(tex,posN.xy));if(!doneP)lumaEndP=FxaaLuma(FxaaTexTop(tex,posP.xy));if(!doneN)lumaEndN=lumaEndN-lumaNN*0.5;if(!doneP)lumaEndP=lumaEndP-lumaNN*0.5;doneN=abs(lumaEndN)>=gradientScaled;doneP=abs(lumaEndP)>=gradientScaled;if(!doneN)posN.x-=offNP.x*FXAA_QUALITY_P2;if(!doneN)posN.y-=offNP.y*FXAA_QUALITY_P2;doneNP=(!doneN)||(!doneP);if(!doneP)posP.x+=offNP.x*FXAA_QUALITY_P2;if(!doneP)posP.y+=offNP.y*FXAA_QUALITY_P2;\n#if (FXAA_QUALITY_PS > 3)\nif(doneNP){if(!doneN)lumaEndN=FxaaLuma(FxaaTexTop(tex,posN.xy));if(!doneP)lumaEndP=FxaaLuma(FxaaTexTop(tex,posP.xy));if(!doneN)lumaEndN=lumaEndN-lumaNN*0.5;if(!doneP)lumaEndP=lumaEndP-lumaNN*0.5;doneN=abs(lumaEndN)>=gradientScaled;doneP=abs(lumaEndP)>=gradientScaled;if(!doneN)posN.x-=offNP.x*FXAA_QUALITY_P3;if(!doneN)posN.y-=offNP.y*FXAA_QUALITY_P3;doneNP=(!doneN)||(!doneP);if(!doneP)posP.x+=offNP.x*FXAA_QUALITY_P3;if(!doneP)posP.y+=offNP.y*FXAA_QUALITY_P3;\n#if (FXAA_QUALITY_PS > 4)\nif(doneNP){if(!doneN)lumaEndN=FxaaLuma(FxaaTexTop(tex,posN.xy));if(!doneP)lumaEndP=FxaaLuma(FxaaTexTop(tex,posP.xy));if(!doneN)lumaEndN=lumaEndN-lumaNN*0.5;if(!doneP)lumaEndP=lumaEndP-lumaNN*0.5;doneN=abs(lumaEndN)>=gradientScaled;doneP=abs(lumaEndP)>=gradientScaled;if(!doneN)posN.x-=offNP.x*FXAA_QUALITY_P4;if(!doneN)posN.y-=offNP.y*FXAA_QUALITY_P4;doneNP=(!doneN)||(!doneP);if(!doneP)posP.x+=offNP.x*FXAA_QUALITY_P4;if(!doneP)posP.y+=offNP.y*FXAA_QUALITY_P4;\n#if (FXAA_QUALITY_PS > 5)\nif(doneNP){if(!doneN)lumaEndN=FxaaLuma(FxaaTexTop(tex,posN.xy));if(!doneP)lumaEndP=FxaaLuma(FxaaTexTop(tex,posP.xy));if(!doneN)lumaEndN=lumaEndN-lumaNN*0.5;if(!doneP)lumaEndP=lumaEndP-lumaNN*0.5;doneN=abs(lumaEndN)>=gradientScaled;doneP=abs(lumaEndP)>=gradientScaled;if(!doneN)posN.x-=offNP.x*FXAA_QUALITY_P5;if(!doneN)posN.y-=offNP.y*FXAA_QUALITY_P5;doneNP=(!doneN)||(!doneP);if(!doneP)posP.x+=offNP.x*FXAA_QUALITY_P5;if(!doneP)posP.y+=offNP.y*FXAA_QUALITY_P5;\n#if (FXAA_QUALITY_PS > 6)\nif(doneNP){if(!doneN)lumaEndN=FxaaLuma(FxaaTexTop(tex,posN.xy));if(!doneP)lumaEndP=FxaaLuma(FxaaTexTop(tex,posP.xy));if(!doneN)lumaEndN=lumaEndN-lumaNN*0.5;if(!doneP)lumaEndP=lumaEndP-lumaNN*0.5;doneN=abs(lumaEndN)>=gradientScaled;doneP=abs(lumaEndP)>=gradientScaled;if(!doneN)posN.x-=offNP.x*FXAA_QUALITY_P6;if(!doneN)posN.y-=offNP.y*FXAA_QUALITY_P6;doneNP=(!doneN)||(!doneP);if(!doneP)posP.x+=offNP.x*FXAA_QUALITY_P6;if(!doneP)posP.y+=offNP.y*FXAA_QUALITY_P6;\n#if (FXAA_QUALITY_PS > 7)\nif(doneNP){if(!doneN)lumaEndN=FxaaLuma(FxaaTexTop(tex,posN.xy));if(!doneP)lumaEndP=FxaaLuma(FxaaTexTop(tex,posP.xy));if(!doneN)lumaEndN=lumaEndN-lumaNN*0.5;if(!doneP)lumaEndP=lumaEndP-lumaNN*0.5;doneN=abs(lumaEndN)>=gradientScaled;doneP=abs(lumaEndP)>=gradientScaled;if(!doneN)posN.x-=offNP.x*FXAA_QUALITY_P7;if(!doneN)posN.y-=offNP.y*FXAA_QUALITY_P7;doneNP=(!doneN)||(!doneP);if(!doneP)posP.x+=offNP.x*FXAA_QUALITY_P7;if(!doneP)posP.y+=offNP.y*FXAA_QUALITY_P7;\n#if (FXAA_QUALITY_PS > 8)\nif(doneNP){if(!doneN)lumaEndN=FxaaLuma(FxaaTexTop(tex,posN.xy));if(!doneP)lumaEndP=FxaaLuma(FxaaTexTop(tex,posP.xy));if(!doneN)lumaEndN=lumaEndN-lumaNN*0.5;if(!doneP)lumaEndP=lumaEndP-lumaNN*0.5;doneN=abs(lumaEndN)>=gradientScaled;doneP=abs(lumaEndP)>=gradientScaled;if(!doneN)posN.x-=offNP.x*FXAA_QUALITY_P8;if(!doneN)posN.y-=offNP.y*FXAA_QUALITY_P8;doneNP=(!doneN)||(!doneP);if(!doneP)posP.x+=offNP.x*FXAA_QUALITY_P8;if(!doneP)posP.y+=offNP.y*FXAA_QUALITY_P8;\n#if (FXAA_QUALITY_PS > 9)\nif(doneNP){if(!doneN)lumaEndN=FxaaLuma(FxaaTexTop(tex,posN.xy));if(!doneP)lumaEndP=FxaaLuma(FxaaTexTop(tex,posP.xy));if(!doneN)lumaEndN=lumaEndN-lumaNN*0.5;if(!doneP)lumaEndP=lumaEndP-lumaNN*0.5;doneN=abs(lumaEndN)>=gradientScaled;doneP=abs(lumaEndP)>=gradientScaled;if(!doneN)posN.x-=offNP.x*FXAA_QUALITY_P9;if(!doneN)posN.y-=offNP.y*FXAA_QUALITY_P9;doneNP=(!doneN)||(!doneP);if(!doneP)posP.x+=offNP.x*FXAA_QUALITY_P9;if(!doneP)posP.y+=offNP.y*FXAA_QUALITY_P9;\n#if (FXAA_QUALITY_PS > 10)\nif(doneNP){if(!doneN)lumaEndN=FxaaLuma(FxaaTexTop(tex,posN.xy));if(!doneP)lumaEndP=FxaaLuma(FxaaTexTop(tex,posP.xy));if(!doneN)lumaEndN=lumaEndN-lumaNN*0.5;if(!doneP)lumaEndP=lumaEndP-lumaNN*0.5;doneN=abs(lumaEndN)>=gradientScaled;doneP=abs(lumaEndP)>=gradientScaled;if(!doneN)posN.x-=offNP.x*FXAA_QUALITY_P10;if(!doneN)posN.y-=offNP.y*FXAA_QUALITY_P10;doneNP=(!doneN)||(!doneP);if(!doneP)posP.x+=offNP.x*FXAA_QUALITY_P10;if(!doneP)posP.y+=offNP.y*FXAA_QUALITY_P10;\n#if (FXAA_QUALITY_PS > 11)\nif(doneNP){if(!doneN)lumaEndN=FxaaLuma(FxaaTexTop(tex,posN.xy));if(!doneP)lumaEndP=FxaaLuma(FxaaTexTop(tex,posP.xy));if(!doneN)lumaEndN=lumaEndN-lumaNN*0.5;if(!doneP)lumaEndP=lumaEndP-lumaNN*0.5;doneN=abs(lumaEndN)>=gradientScaled;doneP=abs(lumaEndP)>=gradientScaled;if(!doneN)posN.x-=offNP.x*FXAA_QUALITY_P11;if(!doneN)posN.y-=offNP.y*FXAA_QUALITY_P11;doneNP=(!doneN)||(!doneP);if(!doneP)posP.x+=offNP.x*FXAA_QUALITY_P11;if(!doneP)posP.y+=offNP.y*FXAA_QUALITY_P11;\n#if (FXAA_QUALITY_PS > 12)\nif(doneNP){if(!doneN)lumaEndN=FxaaLuma(FxaaTexTop(tex,posN.xy));if(!doneP)lumaEndP=FxaaLuma(FxaaTexTop(tex,posP.xy));if(!doneN)lumaEndN=lumaEndN-lumaNN*0.5;if(!doneP)lumaEndP=lumaEndP-lumaNN*0.5;doneN=abs(lumaEndN)>=gradientScaled;doneP=abs(lumaEndP)>=gradientScaled;if(!doneN)posN.x-=offNP.x*FXAA_QUALITY_P12;if(!doneN)posN.y-=offNP.y*FXAA_QUALITY_P12;doneNP=(!doneN)||(!doneP);if(!doneP)posP.x+=offNP.x*FXAA_QUALITY_P12;if(!doneP)posP.y+=offNP.y*FXAA_QUALITY_P12;}\n#endif\n}\n#endif\n}\n#endif\n}\n#endif\n}\n#endif\n}\n#endif\n}\n#endif\n}\n#endif\n}\n#endif\n}\n#endif\n}FxaaFloat dstN=posM.x-posN.x;FxaaFloat dstP=posP.x-posM.x;if(!horzSpan)dstN=posM.y-posN.y;if(!horzSpan)dstP=posP.y-posM.y;FxaaBool goodSpanN=(lumaEndN<0.0)!=lumaMLTZero;FxaaFloat spanLength=(dstP+dstN);FxaaBool goodSpanP=(lumaEndP<0.0)!=lumaMLTZero;FxaaFloat spanLengthRcp=1.0/spanLength;FxaaBool directionN=dstN<dstP;FxaaFloat dst=min(dstN,dstP);FxaaBool goodSpan=directionN ? goodSpanN : goodSpanP;FxaaFloat subpixG=subpixF*subpixF;FxaaFloat pixelOffset=(dst*(-spanLengthRcp))+0.5;FxaaFloat subpixH=subpixG*fxaaQualitySubpix;FxaaFloat pixelOffsetGood=goodSpan ? pixelOffset : 0.0;FxaaFloat pixelOffsetSubpix=max(pixelOffsetGood,subpixH);if(!horzSpan)posM.x+=pixelOffsetSubpix*lengthSign;if(horzSpan)posM.y+=pixelOffsetSubpix*lengthSign;\n#if (FXAA_DISCARD == 1)\nreturn FxaaTexTop(tex,posM);\n#else\nreturn FxaaFloat4(FxaaTexTop(tex,posM).xyz,lumaM);\n#endif\n}\n#endif\nvoid main(){out_color=FxaaPixelShader(vCoord,vec4(0.0),inputBuffer,inputBuffer,inputBuffer,resolution,vec4(0.0),vec4(0.0),vec4(0.0),0.75,0.166,0.0833,0.0,0.0,0.0,vec4(0.0));out_color.a=texture(inputBuffer,vCoord).a;}",
@@ -3091,8 +3112,8 @@ var __defProp = Object.defineProperty,
           }
         );
       })(e),
-      b = se(e, { materialBuffer: N, mergedMesh: P }),
-      R = de(e, { fullscreenQuad: y, toneMapping: r }),
+      b = makeGBufferPass(e, { materialBuffer: N, mergedMesh: P }),
+      R = makeToneMapPass(e, { fullscreenQuad: y, toneMapping: r }),
       E = (function (e, t) {
         const { fullscreenQuad: a } = t,
           n = makeRenderPass(e, {
@@ -3251,7 +3272,7 @@ var __defProp = Object.defineProperty,
         (Z = t);
     }
     function pe(e) {
-      let t = R.draw({ light: e }, !0);
+      let t = R.draw({ light: e }, true);
       E.draw({ light: t.color[0] });
     }
     function xe() {
@@ -3301,7 +3322,6 @@ var __defProp = Object.defineProperty,
         isFirstTile: r,
         isLastTile: s,
       } = I.nextTile(V);
-      console.log(t);
       r &&
         (0 === w && (re(k), X.setPreviousCamera(S)),
         ie(ee, te, !0),

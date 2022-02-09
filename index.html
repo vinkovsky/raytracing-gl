@@ -446,6 +446,14 @@
       renderer.renderWhenOffFocus = false;
       renderer.useTileRender = true;
 
+      renderer.toneMapping = THREE.LinearToneMapping;
+
+      setTimeout(() => {
+        renderer.toneMapping = THREE.ReinhardToneMapping;
+        // renderer.needsUpdate = true;
+      }, 5000);
+      // renderer.toneMappingExposure = 20;
+
       document.body.appendChild(renderer.domElement);
 
       const scene = new THREE.Scene();

@@ -83,4 +83,18 @@ vec4 LGL_An(sampler2D map,vec2 uv){
                 if(isBG){continue;}vec4 upscaledLight=texture(lightTex,uv);
                 vec3 kernelColor=upscaledLight.rgb/upscaledLight.a;
                 float Dc=distance(color,kernelColor);
-                float Wc;if(useMomentVariance>0.){Wc=min(exp(-Dc/((1.+sqrt(var))*colorFactor+1e-6)),1.0);}else{Wc=min(exp(-Dc/(colorFactor+1e-6)),1.0);}vec3 kernelNormal=texture(gNormal,uv).rgb;float Dn=dot(normal,kernelNormal);Dn=Dn/float(stepwidth*stepwidth+1e-6);if(Dn<1e-3){continue;}float Wn=Dn;vec3 kernelPosition=positionAndMeshIndex.rgb;float Dp=distance(position,kernelPosition);float Wp=min(exp(-Dp/(positionFactor+1e-6)),1.0);float weight=Wc*Wn*Wp*kernel[i];weightSum+=weight;colorSum+=kernelColor*weight;}colorSum=colorSum/weightSum;return vec4(colorSum*sampleFrame,sampleFrame);}void main(){vec4 light=LGL_Ar();out_color=light;}
+                float Wc;if(useMomentVariance>0.){Wc=min(exp(-Dc/((1.+sqrt(var))*colorFactor+1e-6)),1.0);}
+                else{Wc=min(exp(-Dc/(colorFactor+1e-6)),1.0);}
+                vec3 kernelNormal=texture(gNormal,uv).rgb;
+                float Dn=dot(normal,kernelNormal);
+                Dn=Dn/float(stepwidth*stepwidth+1e-6);
+                if(Dn<1e-3){continue;}float Wn=Dn;
+                vec3 kernelPosition=positionAndMeshIndex.rgb;
+                float Dp=distance(position,kernelPosition);
+                float Wp=min(exp(-Dp/(positionFactor+1e-6)),1.0);
+                float weight=Wc*Wn*Wp*kernel[i];
+                weightSum+=weight;
+                colorSum+=kernelColor*weight;
+                }colorSum=colorSum/weightSum;
+                return vec4(colorSum*sampleFrame,sampleFrame);
+                }void main(){vec4 light=LGL_Ar();out_color=light;}

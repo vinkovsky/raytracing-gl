@@ -437,15 +437,19 @@
       });
 
       renderer.useWorker = true;
-      renderer.bounces = 3;
+      renderer.bounces = 2;
       renderer.envMapIntensity = 2;
-      renderer.enviromentVisible = true;
-      renderer.enableDenoise = true;
-      renderer.enableTemporalDenoise = true;
-      renderer.movingDownsampling = true;
+      renderer.enviromentVisible = false;
+      renderer.enableDenoise = false;
+      renderer.enableTemporalDenoise = false;
+      renderer.enableSpatialDenoise = false;
+      renderer.movingDownsampling = false;
       renderer.renderWhenOffFocus = false;
-      renderer.useTileRender = true;
-
+      renderer.useTileRender = false;
+      renderer.setDenoiseColorBlendFactor(0.6);
+      renderer.setDenoiseColorFactor(0.6);
+      renderer.setDenoiseMomentBlendFactor(0.6);
+      renderer.setDenoisePositionFactor(0.4);
       renderer.toneMapping = THREE.LinearToneMapping;
 
       setTimeout(() => {
@@ -506,9 +510,9 @@
           rgbeLoader3.load(envMapPath3, resolve);
         });
 
-        //  scene.environment = envMap3;
+        scene.environment = envMap3;
 
-        scene.environment = new THREE.Color("white");
+        // scene.environment = new THREE.Color("white");
 
         const gltfLoader = new THREE.GLTFLoader();
         const gltfInfo = await new Promise((resolve) => {

@@ -3696,28 +3696,35 @@ var __defProp = Object.defineProperty,
       }
     }
 
-    function fullDraw(e) {
+    function fullDraw(camera) {
       if (ready) {
         swapGBuffer();
         swapReprojectBuffer();
-        if (areCamerasEqual(e, lastCamera)) setStrataCount++;
-        else {
-          if (movingDownsampling)
-            return (
-              setCameras(e, lastCamera),
-              (setStrataCount = 0),
-              void drawPreview()
-            );
-          (setStrataCount = 0), clearBuffer(hdrBuffer);
+
+        if (areCamerasEqual(camera, lastCamera)) {
+          setStrataCount++;
+        } else if (movingDownsampling) {
+          setCameras(camera, lastCamera);
+          setStrataCount = 0;
+
+          return drawPreview();
+        } else {
+          setStrataCount = 0;
+          clearBuffer(hdrBuffer);
         }
-        setCameras(e, lastCamera);
+
+        setCameras(camera, lastCamera);
         updateSeed(screenWidth, screenHeight, true);
         renderGBuffer();
         rayTracePass.bindTextures();
         addSampleToBuffer(hdrBuffer, screenWidth, screenHeight);
-        enableDenoise && (enableTemporalDenoise || enableSpatialDenoise)
-          ? denoiseToneMapToScreen()
-          : toneMapToScreen(hdrBuffer.color[0]);
+
+        if (enableDenoise && (enableTemporalDenoise || enableSpatialDenoise)) {
+          denoiseToneMapToScreen();
+        } else {
+          toneMapToScreen(hdrBuffer.color[0]);
+        }
+
         sampleRenderedCallback();
       }
     }

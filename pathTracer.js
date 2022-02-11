@@ -2586,8 +2586,8 @@ var __defProp = Object.defineProperty,
       }
     }
 
-    function setEnviromentVisible(isVisible) {
-      renderPass.setUniform("enviromentVisible", Number(isVisible));
+    function setEnviromentVisible(visibility) {
+      renderPass.setUniform("enviromentVisible", Number(visibility));
     }
 
     function nextSeed() {
@@ -2971,20 +2971,20 @@ var __defProp = Object.defineProperty,
       renderPass.setTexture("gColor", color);
     }
 
-    function setColorFactor(factor) {
-      colorFactor = factor;
+    function setColorFactor(value) {
+      colorFactor = value;
     }
 
-    function setNormalFactor(factor) {
-      normalFactor = factor;
+    function setNormalFactor(value) {
+      normalFactor = value;
     }
 
-    function setPositionFactor(factor) {
-      positionFactor = factor;
+    function setPositionFactor(value) {
+      positionFactor = value;
     }
 
-    function setDemodulateAlbedo(factor) {
-      renderPass.setUniform("demodulateAlbedo", factor);
+    function setDemodulateAlbedo(value) {
+      renderPass.setUniform("demodulateAlbedo", value);
     }
 
     function getDenoiseFactors() {
@@ -3296,16 +3296,16 @@ var __defProp = Object.defineProperty,
       renderPass.setUniform("historyCamera", historyCamera.elements);
     }
 
-    function setDenoiseColorBlendFactor(factor) {
-      colorBlendFactor = factor;
+    function setDenoiseColorBlendFactor(value) {
+      colorBlendFactor = value;
     }
 
-    function setDenoiseMomentBlendFactor(factor) {
-      momentBlendFactor = factor;
+    function setDenoiseMomentBlendFactor(value) {
+      momentBlendFactor = value;
     }
 
-    function setDemodulateAlbedo(factor) {
-      renderPass.setUniform("demodulateAlbedo", factor);
+    function setDemodulateAlbedo(value) {
+      renderPass.setUniform("demodulateAlbedo", value);
     }
 
     function getDenoiseFactors() {
@@ -3381,7 +3381,12 @@ var __defProp = Object.defineProperty,
   }) {
     const maxReprojectedSamples = 20;
 
+    // how many samples to render with uniform noise before switching to stratified noise
+    const numUniformSamples = 4;
+
     const tileRender = makeTileRender(gl);
+
+    const previewSize = makeRenderSize(gl);
 
     const decomposedScene = decomposeScene(scene, camera);
 
@@ -3418,35 +3423,47 @@ var __defProp = Object.defineProperty,
       loadingCallback,
     });
 
-    const S = new THREE.PerspectiveCamera(),
-      M = makeRenderSize(gl);
-    let B,
-      V,
-      ready = false,
-      w = 0,
-      Q = !0,
-      sampleRenderedCallback = () => {};
+    const lastCamera = new THREE.PerspectiveCamera();
 
-    let H, O, k, Z, K, q;
+    let frameTime, elapsedFrameTime;
 
-    // how many samples to render with uniform noise before switching to stratified noise
-    const numUniformSamples = 4;
+    let ready = false;
 
-    function J() {
-      let e = K;
-      K = q;
-      q = e;
+    let setStrataCount = 0;
+
+    let firstFrame = true;
+
+    let sampleRenderedCallback = () => {};
+
+    let screenWidth = 0;
+    let screenHeight = 0;
+
+    let gBuffer,
+      gBufferBack,
+      hdrBuffer,
+      reprojectBuffer,
+      reprojectBackBuffer,
+      lastToneMappedTexture;
+
+    function swapReprojectBuffer() {
+      let temp = reprojectBuffer;
+      reprojectBuffer = reprojectBackBuffer;
+      reprojectBackBuffer = temp;
     }
 
-    function j() {
-      let e = H;
-      H = O;
-      O = e;
+    function swapGBuffer() {
+      let temp = gBuffer;
+      gBuffer = gBufferBack;
+      gBufferBack = temp;
     }
 
-    function setDemodulateAlbedo(e = true) {
-      const t = Number(e && enableTemporalDenoise && enableSpatialDenoise);
-      reprojectPass.setDemodulateAlbedo(t), svgfPass.setDemodulateAlbedo(t);
+    function setDemodulateAlbedo(value = true) {
+      const val = Number(
+        value && enableTemporalDenoise && enableSpatialDenoise
+      );
+
+      reprojectPass.setDemodulateAlbedo(val);
+      svgfPass.setDemodulateAlbedo(val);
     }
 
     const noiseImage = new Image();
@@ -3460,9 +3477,6 @@ var __defProp = Object.defineProperty,
 
     setDemodulateAlbedo(false);
 
-    let ee = 0,
-      te = 0;
-
     function setCameras(camera, lastCamera) {
       rayTracePass.setCamera(camera);
       gBufferPass.setCamera(camera);
@@ -3472,16 +3486,16 @@ var __defProp = Object.defineProperty,
 
     function updateSeed(width, height, useJitter = true) {
       rayTracePass.setSize(width, height);
-      rayTracePass.setFrameCount(w);
+      rayTracePass.setFrameCount(setStrataCount);
 
       const jitterX = useJitter ? (Math.random() - 0.5) / width : 0;
       const jitterY = useJitter ? (Math.random() - 0.5) / height : 0;
 
       enableDenoise || rayTracePass.setJitter(jitterX, jitterY);
 
-      if (w === 0) {
+      if (setStrataCount === 0) {
         rayTracePass.setStrataCount(1);
-      } else if (w === numUniformSamples) {
+      } else if (setStrataCount === numUniformSamples) {
         rayTracePass.setStrataCount(6);
       } else {
         rayTracePass.nextSeed();
@@ -3523,101 +3537,116 @@ var __defProp = Object.defineProperty,
       gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
       toneMapPass.draw({ light: lightTexture, lightScale });
 
-      Z = lightTexture;
+      lastToneMappedTexture = lightTexture;
     }
 
-    function pe(light) {
-      let t = toneMapPass.draw({ light }, true);
-      fxaaPass.draw({ light: t.color[0] });
+    function spatialDenoiseToScreen(light) {
+      let lightTexture = toneMapPass.draw({ light }, true);
+      fxaaPass.draw({ light: lightTexture.color[0] });
     }
 
-    function xe() {
-      H.bind(),
-        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT),
-        gl.viewport(0, 0, ee, te),
-        gBufferPass.draw(),
-        H.unbind(),
-        svgfPass.setGBuffers({
-          position: H.color[0],
-          normal: H.color[1],
-          color: H.color[2],
-        });
+    function renderGBuffer() {
+      gBuffer.bind();
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      gl.viewport(0, 0, screenWidth, screenHeight);
+      gBufferPass.draw();
+      gBuffer.unbind();
+
+      svgfPass.setGBuffers({
+        position: gBuffer.color[0],
+        normal: gBuffer.color[1],
+        color: gBuffer.color[2],
+      });
     }
 
-    function he() {
+    function denoiseToneMapToScreen() {
       if (
         (enableTemporalDenoise &&
-          (K.bind(),
-          gl.viewport(0, 0, ee, te),
+          (reprojectBuffer.bind(),
+          gl.viewport(0, 0, screenWidth, screenHeight),
           reprojectPass.draw({
-            light: k.color[0],
-            position: H.color[0],
-            color: H.color[2],
-            previousLight: Z,
-            previousPosition: O.color[0],
-            previousColor: O.color[2],
-            previousMomentLengthVariance: q.color[1],
+            light: hdrBuffer.color[0],
+            position: gBuffer.color[0],
+            color: gBuffer.color[2],
+            previousLight: lastToneMappedTexture,
+            previousPosition: gBufferBack.color[0],
+            previousColor: gBufferBack.color[2],
+            previousMomentLengthVariance: reprojectBackBuffer.color[1],
           }),
-          K.unbind(),
-          enableSpatialDenoise || (pe(K.color[0]), (Z = K.color[0]))),
+          reprojectBuffer.unbind(),
+          enableSpatialDenoise ||
+            (spatialDenoiseToScreen(reprojectBuffer.color[0]),
+            (lastToneMappedTexture = reprojectBuffer.color[0]))),
         enableSpatialDenoise)
       )
         if (enableTemporalDenoise) {
-          pe(
-            svgfPass.draw({ light: K.color[0], reprojectData: q.color[1] })
-              .color[0]
-          ),
-            (Z = K.color[0]);
+          spatialDenoiseToScreen(
+            svgfPass.draw({
+              light: reprojectBuffer.color[0],
+              reprojectData: reprojectBackBuffer.color[1],
+            }).color[0]
+          );
+
+          lastToneMappedTexture = reprojectBuffer.color[0];
         } else {
-          pe(
-            svgfPass.draw({ light: k.color[0], reprojectData: null }).color[0]
-          ),
-            (Z = k.color[0]);
+          spatialDenoiseToScreen(
+            svgfPass.draw({ light: hdrBuffer.color[0], reprojectData: null })
+              .color[0]
+          );
+
+          lastToneMappedTexture = hdrBuffer.color[0];
         }
     }
 
     function renderTile(buffer, x, y, width, height) {
       gl.scissor(x, y, width, height);
       gl.enable(gl.SCISSOR_TEST);
-      addSampleToBuffer(buffer, ee, te);
+      addSampleToBuffer(buffer, screenWidth, screenHeight);
       gl.disable(gl.SCISSOR_TEST);
     }
 
     function drawTile(t = false) {
       const { x, y, tileWidth, tileHeight, isFirstTile, isLastTile } =
-        tileRender.nextTile(V);
+        tileRender.nextTile(elapsedFrameTime);
 
       isFirstTile &&
-        (0 === w && (clearBuffer(k), reprojectPass.setPreviousCamera(S)),
-        updateSeed(ee, te, true),
-        xe(),
+        (0 === setStrataCount &&
+          (clearBuffer(hdrBuffer), reprojectPass.setPreviousCamera(lastCamera)),
+        updateSeed(screenWidth, screenHeight, true),
+        renderGBuffer(),
         rayTracePass.bindTextures()),
-        renderTile(k, x, y, tileWidth, tileHeight);
+        renderTile(hdrBuffer, x, y, tileWidth, tileHeight);
 
-      t && !isLastTile && toneMapToScreen(k.color[0]),
+      t && !isLastTile && toneMapToScreen(hdrBuffer.color[0]),
         isLastTile &&
           (enableDenoise && (enableTemporalDenoise || enableSpatialDenoise)
-            ? ((Z = k.color[0]), he(), (Z = k.color[0]))
-            : toneMapToScreen(k.color[0]),
-          J(),
-          j(),
-          w++,
+            ? ((lastToneMappedTexture = hdrBuffer.color[0]),
+              denoiseToneMapToScreen(),
+              (lastToneMappedTexture = hdrBuffer.color[0]))
+            : toneMapToScreen(hdrBuffer.color[0]),
+          swapReprojectBuffer(),
+          swapGBuffer(),
+          setStrataCount++,
           sampleRenderedCallback());
     }
 
-    function Ae() {
-      var t, screenWidth, screenHeight;
-      updateSeed(M.width, M.height, false);
+    function drawPreview() {
+      let buffer, screenWidth, screenHeight;
+      updateSeed(previewSize.width, previewSize.height, false);
       rayTracePass.bindTextures();
-      t = k;
-      screenWidth = M.width;
-      screenHeight = M.height;
-      t.bind();
+
+      buffer = hdrBuffer;
+
+      screenWidth = previewSize.width;
+      screenHeight = previewSize.height;
+
+      buffer.bind();
       gl.viewport(0, 0, screenWidth, screenHeight);
       rayTracePass.draw();
-      t.unbind();
-      toneMapToScreen(k.color[0], M.scale);
-      clearBuffer(k);
+      buffer.unbind();
+
+      toneMapToScreen(hdrBuffer.color[0], previewSize.scale);
+      clearBuffer(hdrBuffer);
     }
 
     function getDenoiseFactors() {
@@ -3629,44 +3658,65 @@ var __defProp = Object.defineProperty,
 
     function draw(camera) {
       if (ready) {
-        areCamerasEqual(camera, S)
+        areCamerasEqual(camera, lastCamera)
           ? drawTile()
-          : (setCameras(camera, S),
-            Q ? (Q = false) : movingDownsampling ? Ae() : drawTile(true),
-            (w = 0),
+          : (setCameras(camera, lastCamera),
+            firstFrame
+              ? (firstFrame = false)
+              : movingDownsampling
+              ? drawPreview()
+              : drawTile(true),
+            (setStrataCount = 0),
             tileRender.reset());
       }
     }
 
-    return {
-      draw,
-      fullDraw: function (e) {
-        if (ready) {
-          j();
-          J();
-          if (areCamerasEqual(e, S)) w++;
-          else {
-            if (movingDownsampling) return setCameras(e, S), (w = 0), void Ae();
-            (w = 0), clearBuffer(k);
-          }
-          setCameras(e, S);
-          updateSeed(ee, te, true);
-          xe();
-          rayTracePass.bindTextures();
-          addSampleToBuffer(k, ee, te);
-          enableDenoise && (enableTemporalDenoise || enableSpatialDenoise)
-            ? he()
-            : toneMapToScreen(k.color[0]);
-          sampleRenderedCallback();
+    function fullDraw(e) {
+      if (ready) {
+        swapGBuffer();
+        swapReprojectBuffer();
+        if (areCamerasEqual(e, lastCamera)) setStrataCount++;
+        else {
+          if (movingDownsampling)
+            return (
+              setCameras(e, lastCamera),
+              (setStrataCount = 0),
+              void drawPreview()
+            );
+          (setStrataCount = 0), clearBuffer(hdrBuffer);
         }
-      },
-      setSize: function (t, a) {
-        (ee = t),
-          (te = a),
-          tileRender.setSize(t, a),
-          M.setSize(t, a),
-          (function (t, a) {
-            (k = makeFramebuffer(gl, {
+        setCameras(e, lastCamera);
+        updateSeed(screenWidth, screenHeight, true);
+        renderGBuffer();
+        rayTracePass.bindTextures();
+        addSampleToBuffer(hdrBuffer, screenWidth, screenHeight);
+        enableDenoise && (enableTemporalDenoise || enableSpatialDenoise)
+          ? denoiseToneMapToScreen()
+          : toneMapToScreen(hdrBuffer.color[0]);
+        sampleRenderedCallback();
+      }
+    }
+
+    function setSize(t, a) {
+      (screenWidth = t),
+        (screenHeight = a),
+        tileRender.setSize(t, a),
+        previewSize.setSize(t, a),
+        (function (t, a) {
+          (hdrBuffer = makeFramebuffer(gl, {
+            color: {
+              0: makeTexture(gl, {
+                width: t,
+                height: a,
+                storage: "float",
+                magFilter: gl.LINEAR,
+                minFilter: gl.LINEAR,
+              }),
+            },
+          })),
+            (lastToneMappedTexture = hdrBuffer.color[0]);
+          const n = () =>
+            makeFramebuffer(gl, {
               color: {
                 0: makeTexture(gl, {
                   width: t,
@@ -3675,132 +3725,167 @@ var __defProp = Object.defineProperty,
                   magFilter: gl.LINEAR,
                   minFilter: gl.LINEAR,
                 }),
+                1: makeTexture(gl, {
+                  width: t,
+                  height: a,
+                  storage: "float",
+                  channels: 4,
+                  magFilter: gl.LINEAR,
+                  minFilter: gl.LINEAR,
+                }),
               },
-            })),
-              (Z = k.color[0]);
-            const n = () =>
+            });
+          reprojectBuffer = n();
+          reprojectBackBuffer = n();
+          const i = makeTexture(gl, {
+              width: t,
+              height: a,
+              storage: "halfFloat",
+            }),
+            o = makeTexture(gl, { width: t, height: a, storage: "float" }),
+            r = (function (gl, t, a) {
+              const n = gl.createRenderbuffer(),
+                i = gl.RENDERBUFFER;
+              return (
+                gl.bindRenderbuffer(i, n),
+                gl.renderbufferStorage(
+                  gl.RENDERBUFFER,
+                  gl.DEPTH_COMPONENT24,
+                  t,
+                  a
+                ),
+                gl.bindRenderbuffer(i, null),
+                { target: i, texture: n }
+              );
+            })(gl, t, a),
+            s = () =>
               makeFramebuffer(gl, {
                 color: {
                   0: makeTexture(gl, {
                     width: t,
                     height: a,
                     storage: "float",
-                    magFilter: gl.LINEAR,
-                    minFilter: gl.LINEAR,
                   }),
-                  1: makeTexture(gl, {
-                    width: t,
-                    height: a,
-                    storage: "float",
-                    channels: 4,
-                    magFilter: gl.LINEAR,
-                    minFilter: gl.LINEAR,
-                  }),
+                  1: i,
+                  2: o,
                 },
+                depth: r,
               });
-            (K = n()), (q = n());
-            const i = makeTexture(gl, {
-                width: t,
-                height: a,
-                storage: "halfFloat",
-              }),
-              o = makeTexture(gl, { width: t, height: a, storage: "float" }),
-              r = (function (gl, t, a) {
-                const n = gl.createRenderbuffer(),
-                  i = gl.RENDERBUFFER;
-                return (
-                  gl.bindRenderbuffer(i, n),
-                  gl.renderbufferStorage(
-                    gl.RENDERBUFFER,
-                    gl.DEPTH_COMPONENT24,
-                    t,
-                    a
-                  ),
-                  gl.bindRenderbuffer(i, null),
-                  { target: i, texture: n }
-                );
-              })(gl, t, a),
-              s = () =>
-                makeFramebuffer(gl, {
-                  color: {
-                    0: makeTexture(gl, {
-                      width: t,
-                      height: a,
-                      storage: "float",
-                    }),
-                    1: i,
-                    2: o,
-                  },
-                  depth: r,
-                });
-            (H = s()), (O = s());
-          })(t, a),
-          svgfPass.setSize(t, a),
-          toneMapPass.setSize(t, a),
-          fxaaPass.setSize(t, a),
-          (Q = true);
-      },
-      time: function (e) {
-        (V = e - B), (B = e);
-      },
-      reset: function () {
-        (w = 0),
-          tileRender.reset(),
-          clearBuffer(k),
-          clearBuffer(K),
-          clearBuffer(q);
-      },
-      getTotalSamplesRendered: () => w,
-      setfullSampleCallbackCallBack(e) {
-        sampleRenderedCallback = e;
-      },
-      updateBounces: function (e) {
-        rayTracePass.updateBounces(e);
-      },
-      updateEnvLight: function () {
-        const e = decomposeScene(scene, camera);
-        rayTracePass.updateEnvLight(e);
-      },
-      updateMeshLight: function () {
-        const e = decomposeScene(scene, camera);
-        rayTracePass.updateMeshLight(e);
-      },
-      setEnvMapIntensity: function (e) {
-        rayTracePass.setEnvMapIntensity(e);
-      },
-      setEnviromentVisible: function (e) {
-        rayTracePass.setEnviromentVisible(e);
-      },
-      setToneMapping: function (e) {
-        toneMapPass.setToneMapping(e);
-      },
-      setMovingDownsampling: function (e) {
-        movingDownsampling = e;
-      },
-      setDenoiseStatus: function (e) {
-        enableDenoise = e;
-      },
-      setTemporalDenoiseStatus: function (e) {
-        (enableTemporalDenoise = e), setDemodulateAlbedo();
-      },
-      setDenoiseColorBlendFactor: function (e) {
-        reprojectPass.setDenoiseColorBlendFactor(e);
-      },
-      setDenoiseMomentBlendFactor: function (e) {
-        reprojectPass.setDenoiseMomentBlendFactor(e);
-      },
-      setSpatialDenoiseStatus: function (e) {
-        (enableSpatialDenoise = e), setDemodulateAlbedo();
-      },
-      setDenoiseColorFactor: function (e) {
-        svgfPass.setColorFactor(e);
-      },
-      setDenoiseNormalFactor: function (e) {
-        svgfPass.setNormalFactor(e);
-      },
-      setDenoisePositionFactor: function (e) {
-        svgfPass.setPositionFactor(e);
-      },
+          gBuffer = s();
+          gBufferBack = s();
+        })(t, a);
+
+      svgfPass.setSize(t, a);
+      toneMapPass.setSize(t, a);
+      fxaaPass.setSize(t, a);
+      firstFrame = true;
+    }
+
+    function time(newTime) {
+      elapsedFrameTime = newTime - frameTime;
+      frameTime = newTime;
+    }
+
+    function reset() {
+      setStrataCount = 0;
+      tileRender.reset();
+      clearBuffer(hdrBuffer);
+      clearBuffer(reprojectBuffer);
+      clearBuffer(reprojectBackBuffer);
+    }
+
+    const getTotalSamplesRendered = () => setStrataCount;
+
+    function setfullSampleCallbackCallBack(cb) {
+      sampleRenderedCallback = cb;
+    }
+
+    function updateBounces(bounces) {
+      rayTracePass.updateBounces(bounces);
+    }
+    function updateEnvLight() {
+      const decomposedScene = decomposeScene(scene, camera);
+      rayTracePass.updateEnvLight(decomposedScene);
+    }
+
+    function updateMeshLight() {
+      const decomposedScene = decomposeScene(scene, camera);
+      rayTracePass.updateMeshLight(decomposedScene);
+    }
+
+    function setEnvMapIntensity(intensity) {
+      rayTracePass.setEnvMapIntensity(intensity);
+    }
+
+    function setEnviromentVisible(visibility) {
+      rayTracePass.setEnviromentVisible(visibility);
+    }
+
+    function setToneMapping(toneMapping) {
+      toneMapPass.setToneMapping(toneMapping);
+    }
+
+    function setMovingDownsampling(downsampling) {
+      movingDownsampling = downsampling;
+    }
+
+    function setDenoiseStatus(denoise) {
+      enableDenoise = denoise;
+    }
+
+    function setTemporalDenoiseStatus(temporalDenoise) {
+      enableTemporalDenoise = temporalDenoise;
+      setDemodulateAlbedo();
+    }
+
+    function setDenoiseColorBlendFactor(value) {
+      reprojectPass.setDenoiseColorBlendFactor(value);
+    }
+
+    function setDenoiseMomentBlendFactor(value) {
+      reprojectPass.setDenoiseMomentBlendFactor(value);
+    }
+
+    function setSpatialDenoiseStatus(spatialDenoise) {
+      enableSpatialDenoise = spatialDenoise;
+      setDemodulateAlbedo();
+    }
+
+    function setDenoiseColorFactor(value) {
+      svgfPass.setColorFactor(value);
+    }
+
+    function setDenoiseNormalFactor(value) {
+      svgfPass.setNormalFactor(value);
+    }
+
+    function setDenoisePositionFactor(value) {
+      svgfPass.setPositionFactor(value);
+    }
+
+    return {
+      draw,
+      fullDraw,
+      setSize,
+      time,
+      reset,
+      getTotalSamplesRendered,
+      setfullSampleCallbackCallBack,
+      updateBounces,
+      updateEnvLight,
+      updateMeshLight,
+      setEnvMapIntensity,
+      setEnviromentVisible,
+      setToneMapping,
+      setMovingDownsampling,
+      setDenoiseStatus,
+      setTemporalDenoiseStatus,
+      setDenoiseColorBlendFactor,
+      setDenoiseMomentBlendFactor,
+      setSpatialDenoiseStatus,
+      setDenoiseColorFactor,
+      setDenoiseNormalFactor,
+      setDenoisePositionFactor,
       getDenoiseFactors,
       setDemodulateAlbedo,
     };
@@ -3962,10 +4047,12 @@ var __defProp = Object.defineProperty,
       get enviromentVisible() {
         return this._enviromentVisible;
       }
-      set movingDownsampling(e) {
-        (e = !!e),
-          (this._movingDownsampling = e),
-          this.pipeline && this.pipeline.setMovingDownsampling(e);
+      set movingDownsampling(value) {
+        value = !!value;
+        this._movingDownsampling = value;
+        if (this.pipeline) {
+          this.pipeline.setMovingDownsampling(value);
+        }
       }
       get movingDownsampling() {
         return this._movingDownsampling;
@@ -4024,9 +4111,11 @@ var __defProp = Object.defineProperty,
       setDenoisePositionFactor(e) {
         this.pipeline && this.pipeline.setDenoisePositionFactor(e);
       }
-      setDemodulateAlbedo(e) {
-        this.pipeline && this.pipeline.setDemodulateAlbedo(e),
-          (this.needsUpdate = !0);
+      setDemodulateAlbedo(value) {
+        if (this.pipeline) {
+          this.pipeline.setDemodulateAlbedo(value);
+        }
+        this.needsUpdate = true;
       }
       getDenoiseFactors() {
         if (this.pipeline) return this.pipeline.getDenoiseFactors();

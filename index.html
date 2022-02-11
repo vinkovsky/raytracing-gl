@@ -440,12 +440,12 @@
       renderer.bounces = 2;
       renderer.envMapIntensity = 2;
       renderer.enviromentVisible = false;
-      renderer.enableDenoise = false;
+      renderer.enableDenoise = true;
       renderer.enableTemporalDenoise = false;
       renderer.enableSpatialDenoise = false;
-      renderer.movingDownsampling = false;
+      renderer.movingDownsampling = true;
       renderer.renderWhenOffFocus = false;
-      renderer.useTileRender = false;
+      renderer.useTileRender = true;
       renderer.setDenoiseColorBlendFactor(0.6);
       renderer.setDenoiseColorFactor(0.6);
       renderer.setDenoiseMomentBlendFactor(0.6);
@@ -579,14 +579,10 @@
         renderer.render(scene, camera);
         controls.update();
         requestAnimationFrame(tick);
+        //   console.log(renderer.getTotalSamples());
       }
 
       init();
-
-      function ce() {
-        renderer.setDenoiseColorFactor(0.4);
-        renderer.setDenoisePositionFactor(0.2);
-      }
 
       // renderer.fullSampleCallback = () => {
       //   offScreenCtx.drawImage(renderer.domElement, 0, 0);
@@ -596,7 +592,7 @@
       renderer.loadingCallback = {
         onProgress: (e) => console.log(e),
         onComplete: (e) => {
-          console.log(e), ce();
+          console.log(e);
         },
       };
     </script>

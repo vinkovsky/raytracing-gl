@@ -1,38 +1,3 @@
-/**
- * @license
- * MIT license statement included in lglTracer:
- * GLSL-PathTracer:
- * Copyright 2019-2021 Asif Ali. MIT License
- * ray-tracing-renderer:
- * Copyright 2019 HOVER. MIT License
- *
- * lglTracer is not open source. you are free to use this library except for projects for commercial purposes.
- * Copyright 2021 lgltracer.com
- */
-var __defProp = Object.defineProperty,
-  __defProps = Object.defineProperties,
-  __getOwnPropDescs = Object.getOwnPropertyDescriptors,
-  __getOwnPropSymbols = Object.getOwnPropertySymbols,
-  __hasOwnProp = Object.prototype.hasOwnProperty,
-  __propIsEnum = Object.prototype.propertyIsEnumerable,
-  __defNormalProp = (e, t, a) =>
-    t in e
-      ? __defProp(e, t, {
-          enumerable: !0,
-          configurable: !0,
-          writable: !0,
-          value: a,
-        })
-      : (e[t] = a),
-  __spreadValues = (e, t) => {
-    for (var a in t || (t = {}))
-      __hasOwnProp.call(t, a) && __defNormalProp(e, a, t[a]);
-    if (__getOwnPropSymbols)
-      for (var a of __getOwnPropSymbols(t))
-        __propIsEnum.call(t, a) && __defNormalProp(e, a, t[a]);
-    return e;
-  },
-  __spreadProps = (e, t) => __defProps(e, __getOwnPropDescs(t));
 !(function (e, t) {
   "object" == typeof exports && "undefined" != typeof module
     ? t(exports, require("three"))
@@ -46,33 +11,6 @@ var __defProp = Object.defineProperty,
       );
 })(this, function (e, t) {
   "use strict";
-  function a(e) {
-    if (e && e.__esModule) return e;
-    var t = { __proto__: null, [Symbol.toStringTag]: "Module" };
-    return (
-      e &&
-        Object.keys(e).forEach(function (a) {
-          if ("default" !== a) {
-            var n = Object.getOwnPropertyDescriptor(e, a);
-            Object.defineProperty(
-              t,
-              a,
-              n.get
-                ? n
-                : {
-                    enumerable: !0,
-                    get: function () {
-                      return e[a];
-                    },
-                  }
-            );
-          }
-        }),
-      (t.default = e),
-      Object.freeze(t)
-    );
-  }
-  var n = a(t);
 
   //fullscreenQuad.vert
   var fullscreenQuad = {
@@ -3990,57 +3928,66 @@ var __defProp = Object.defineProperty,
     }
   }
 
-  (e.LGLTracerRenderer = class {
-    constructor(e = {}) {
-      (this.canvas = e.canvas || document.createElement("canvas")),
-        (this.gl = this.canvas.getContext("webgl2", {
-          alpha: e.canvasAlpha || !1,
-          depth: !0,
-          stencil: !1,
-          antialias: !1,
-          powerPreference: "high-performance",
-          failIfMajorPerformanceCaveat: !0,
-        })),
-        loadExtensions(this.gl, glRequiredExtensions),
-        (this.optionalExtensions = loadExtensions(
-          this.gl,
-          glOptionalExtensions
-        )),
-        (this._bounces = 2),
-        (this._envMapIntensity = 1),
-        (this._toneMapping = n.LinearToneMapping),
-        (this._movingDownsampling = !1),
-        (this._enableDenoise = !1),
-        (this._enableTemporalDenoise = !0),
-        (this._enableSpatialDenoise = !0),
-        (this._fullSampleCallback = null),
-        (this._enviromentVisible = !0),
-        (this.useTileRender = !1),
-        (this.renderWhenOffFocus = !0),
-        (this.useWorker = e.useWorker || !0),
-        (this.loadingCallback = e.loadingCallback || {
-          onProgress: (e) => console.log(e),
-          onComplete: (e) => console.log(e),
-        }),
-        (this._isBuilding = !0),
-        (this.needsUpdate = !1),
-        (this.size = new n.Vector2(this.canvas.width, this.canvas.height)),
-        (this.pixelRatio = 1),
-        (this.pipeline = null),
-        (this.currentTime = NaN),
-        (this.isValidTime = 1),
-        (this.lastFocus = !1),
-        (this.domElement = this.canvas);
+  class LGLTracerRenderer {
+    constructor(params = {}) {
+      this.canvas = params.canvas || document.createElement("canvas");
+      this.gl = this.canvas.getContext("webgl2", {
+        alpha: params.canvasAlpha || false,
+        depth: true,
+        stencil: false,
+        antialias: false,
+        powerPreference: "high-performance",
+        failIfMajorPerformanceCaveat: true,
+      });
+      loadExtensions(this.gl, glRequiredExtensions);
+      this.optionalExtensions = loadExtensions(this.gl, glOptionalExtensions);
+      this._bounces = 2;
+      this._envMapIntensity = 1;
+      this._toneMapping = THREE.LinearToneMapping;
+      this._movingDownsampling = false;
+      this._enableDenoise = false;
+      this._enableTemporalDenoise = true;
+      this._enableSpatialDenoise = true;
+      this._fullSampleCallback = null;
+      this._enviromentVisible = true;
+      this.useTileRender = false;
+      this.renderWhenOffFocus = true;
+      this.useWorker = params.useWorker || true;
+      this.loadingCallback = params.loadingCallback || {
+        onProgress: (e) => console.log(e),
+        onComplete: (e) => console.log(e),
+      };
+      this._isBuilding = true;
+      this.needsUpdate = false;
+      this.size = new THREE.Vector2(this.canvas.width, this.canvas.height);
+      this.pixelRatio = 1;
+      this.pipeline = null;
+      this.currentTime = NaN;
+      this.isValidTime = 1;
+      this.lastFocus = false;
+      this.domElement = this.canvas;
     }
+
     static isSupported() {
       const e = document
         .createElement("canvas")
-        .getContext("webgl2", { failIfMajorPerformanceCaveat: !0 });
-      if (!e) return !1;
+        .getContext("webgl2", { failIfMajorPerformanceCaveat: true });
+
+      if (!e) {
+        return false;
+      }
+
       const t = i(e, r);
-      for (let a in t) if (!t[a]) return !1;
-      return !0;
+
+      for (let a in t) {
+        if (!t[a]) {
+          return false;
+        }
+      }
+
+      return true;
     }
+
     async buildScene(e, t) {
       const {
         gl: a,
@@ -4057,58 +4004,75 @@ var __defProp = Object.defineProperty,
         useWorker: p,
         loadingCallback: m,
       } = this;
-      (this._isBuilding = !0),
-        e.updateMatrixWorld(),
-        (this.pipeline = await makeRenderingPipeline({
-          gl: a,
-          optionalExtensions: n,
-          scene: e,
-          camera: t,
-          toneMapping: r,
-          bounces: i,
-          envMapIntensity: s,
-          enviromentVisible: l,
-          movingDownsampling: f,
-          enableDenoise: d,
-          enableTemporalDenoise: c,
-          enableSpatialDenoise: u,
-          useWorker: p,
-          loadingCallback: m,
-        })),
-        this.setSize(o.width, o.height),
-        (this._isBuilding = !1),
-        m &&
-          m.onComplete &&
-          "function" == typeof m.onComplete &&
-          m.onComplete("Complete!");
+
+      this._isBuilding = true;
+
+      e.updateMatrixWorld();
+
+      this.pipeline = await makeRenderingPipeline({
+        gl: a,
+        optionalExtensions: n,
+        scene: e,
+        camera: t,
+        toneMapping: r,
+        bounces: i,
+        envMapIntensity: s,
+        enviromentVisible: l,
+        movingDownsampling: f,
+        enableDenoise: d,
+        enableTemporalDenoise: c,
+        enableSpatialDenoise: u,
+        useWorker: p,
+        loadingCallback: m,
+      });
+
+      this.setSize(o.width, o.height);
+
+      this._isBuilding = false;
+
+      m &&
+        m.onComplete &&
+        "function" == typeof m.onComplete &&
+        m.onComplete("Complete!");
     }
+
     set bounces(e) {
-      (this._bounces = e), this.pipeline && this.pipeline.updateBounces(e);
+      this._bounces = e;
+      this.pipeline && this.pipeline.updateBounces(e);
     }
+
     get bounces() {
       return this._bounces;
     }
+
     set envMapIntensity(e) {
-      (e = Number(e)),
-        (this._envMapIntensity = e),
-        this.pipeline && this.pipeline.setEnvMapIntensity(e);
+      e = Number(e);
+      this._envMapIntensity = e;
+      this.pipeline && this.pipeline.setEnvMapIntensity(e);
     }
+
     get envMapIntensity() {
       return this._envMapIntensity;
     }
+
     set toneMapping(e) {
-      (this._toneMapping = e), this.pipeline && this.pipeline.setToneMapping(e);
+      this._toneMapping = e;
+      this.pipeline && this.pipeline.setToneMapping(e);
     }
+
     get toneMapping() {
       return this._toneMapping;
     }
+
     set enviromentVisible(e) {
-      (this._enviromentVisible = e),
-        this.pipeline && this.pipeline.setEnviromentVisible(e);
+      this._enviromentVisible = e;
+      this.pipeline && this.pipeline.setEnviromentVisible(e);
     }
+
     get enviromentVisible() {
       return this._enviromentVisible;
     }
+
     set movingDownsampling(value) {
       value = !!value;
       this._movingDownsampling = value;
@@ -4116,72 +4080,93 @@ var __defProp = Object.defineProperty,
         this.pipeline.setMovingDownsampling(value);
       }
     }
+
     get movingDownsampling() {
       return this._movingDownsampling;
     }
+
     set enableDenoise(e) {
-      (e = !!e),
-        (this._enableDenoise = e),
-        this.pipeline && this.pipeline.setDenoiseStatus(e);
+      e = !!e;
+      this._enableDenoise = e;
+      this.pipeline && this.pipeline.setDenoiseStatus(e);
     }
+
     get enableDenoise() {
       return this._enableDenoise;
     }
+
     set enableTemporalDenoise(e) {
-      (e = !!e),
-        (this._enableTemporalDenoise = e),
-        this.pipeline && this.pipeline.setTemporalDenoiseStatus(e);
+      e = !!e;
+      this._enableTemporalDenoise = e;
+      this.pipeline && this.pipeline.setTemporalDenoiseStatus(e);
     }
+
     get enableTemporalDenoise() {
       return this._enableTemporalDenoise;
     }
+
     set enableSpatialDenoise(e) {
-      (e = !!e),
-        (this._enableSpatialDenoise = e),
-        this.pipeline && this.pipeline.setSpatialDenoiseStatus(e);
+      e = !!e;
+      this._enableSpatialDenoise = e;
+      this.pipeline && this.pipeline.setSpatialDenoiseStatus(e);
     }
+
     get enableSpatialDenoise() {
       return this._enableSpatialDenoise;
     }
+
     set fullSampleCallback(e) {
       e &&
         "function" == typeof e &&
         ((this._fullSampleCallback = e),
         this.pipeline && this.pipeline.setfullSampleCallbackCallBack(e));
     }
+
     get fullSampleCallback() {
       return this._fullSampleCallback;
     }
+
     updateEnvLight() {
       this.pipeline && this.pipeline.updateEnvLight();
     }
+
     updateMeshLight() {
       this.pipeline && this.pipeline.updateMeshLight();
     }
+
     setDenoiseColorBlendFactor(e) {
       this.pipeline && this.pipeline.setDenoiseColorBlendFactor(e);
     }
+
     setDenoiseMomentBlendFactor(e) {
       this.pipeline && this.pipeline.setDenoiseMomentBlendFactor(e);
     }
+
     setDenoiseColorFactor(e) {
       this.pipeline && this.pipeline.setDenoiseColorFactor(e);
     }
+
     setDenoiseNormalFactor(e) {
       this.pipeline && this.pipeline.setDenoiseNormalFactor(e);
     }
+
     setDenoisePositionFactor(e) {
       this.pipeline && this.pipeline.setDenoisePositionFactor(e);
     }
+
     setDemodulateAlbedo(value) {
       if (this.pipeline) {
         this.pipeline.setDemodulateAlbedo(value);
       }
       this.needsUpdate = true;
     }
+
     getDenoiseFactors() {
-      if (this.pipeline) return this.pipeline.getDenoiseFactors();
+      if (this.pipeline) {
+        return this.pipeline.getDenoiseFactors();
+      }
     }
+
     setSize(e, t, a = !0) {
       const { size: n, canvas: i, pipeline: o, pixelRatio: r } = this;
       n.set(e, t),
@@ -4192,24 +4177,32 @@ var __defProp = Object.defineProperty,
           (i.style.height = `${n.height}px`)),
         this.pipeline && o.setSize(n.width * r, n.height * r);
     }
+
     getSize(e) {
       const { size: t } = this;
       return e || (e = new n.Vector2()), e.copy(t);
     }
+
     setPixelRatio(e) {
       const { size: t } = this;
       e && ((this.pixelRatio = e), this.setSize(t.width, t.height, !1));
     }
+
     getPixelRatio() {
       return this.pixelRatio;
     }
+
     getTotalSamples() {
-      if (this.pipeline) return this.pipeline.getTotalSamplesRendered();
+      if (this.pipeline) {
+        return this.pipeline.getTotalSamplesRendered();
+      }
     }
+
     restartTimer() {
       this.isValidTime = NaN;
     }
-    render(e, t) {
+
+    render(scene, camera) {
       if (!this._isBuilding)
         if (this.pipeline) {
           if (
@@ -4225,22 +4218,24 @@ var __defProp = Object.defineProperty,
             this.pipeline.time(this.isValidTime * this.currentTime),
             (this.isValidTime = 1),
             (this.currentTime = NaN),
-            t.updateMatrixWorld(),
+            camera.updateMatrixWorld(),
             this.useTileRender
-              ? this.pipeline.draw(t)
-              : this.pipeline.fullDraw(t);
+              ? this.pipeline.draw(camera)
+              : this.pipeline.fullDraw(camera);
         } else console.error("The scene needs to be built first!");
     }
+
     dispose() {
-      (this.pipeline = null), this.domElement.remove();
+      this.pipeline = null;
+      this.domElement.remove();
     }
-  }),
-    (e.DisneyMaterial = DisneyMaterial),
-    (e.DirectionalLight = DirectionalLight),
-    (e.PointLight = PointLight),
-    (e.QuadLight = QuadLight),
-    (e.RectAreaLight = RectAreaLight),
-    (e.SphereAreaLight = SphereAreaLight),
-    Object.defineProperty(e, "__esModule", { value: !0 }),
-    (e[Symbol.toStringTag] = "Module");
+  }
+
+  e.LGLTracerRenderer = LGLTracerRenderer;
+  e.DisneyMaterial = DisneyMaterial;
+  e.DirectionalLight = DirectionalLight;
+  e.PointLight = PointLight;
+  e.QuadLight = QuadLight;
+  e.RectAreaLight = RectAreaLight;
+  e.SphereAreaLight = SphereAreaLight;
 });

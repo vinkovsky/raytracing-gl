@@ -3363,6 +3363,25 @@ var __defProp = Object.defineProperty,
     return true;
   }
 
+  function makeDepthTarget(gl, width, height) {
+    const texture = gl.createRenderbuffer();
+    const target = gl.RENDERBUFFER;
+
+    gl.bindRenderbuffer(target, texture);
+    gl.renderbufferStorage(
+      gl.RENDERBUFFER,
+      gl.DEPTH_COMPONENT24,
+      width,
+      height
+    );
+    gl.bindRenderbuffer(target, null);
+
+    return {
+      target,
+      texture,
+    };
+  }
+
   async function makeRenderingPipeline({
     gl,
     optionalExtensions,
@@ -3729,87 +3748,88 @@ var __defProp = Object.defineProperty,
       }
     }
 
-    function setSize(t, a) {
-      (screenWidth = t),
-        (screenHeight = a),
-        tileRender.setSize(t, a),
-        previewSize.setSize(t, a),
-        (function (t, a) {
-          (hdrBuffer = makeFramebuffer(gl, {
-            color: {
-              0: makeTexture(gl, {
-                width: t,
-                height: a,
-                storage: "float",
-                magFilter: gl.LINEAR,
-                minFilter: gl.LINEAR,
-              }),
-            },
-          })),
-            (lastToneMappedTexture = hdrBuffer.color[0]);
-          const n = () =>
-            makeFramebuffer(gl, {
-              color: {
-                0: makeTexture(gl, {
-                  width: t,
-                  height: a,
-                  storage: "float",
-                  magFilter: gl.LINEAR,
-                  minFilter: gl.LINEAR,
-                }),
-                1: makeTexture(gl, {
-                  width: t,
-                  height: a,
-                  storage: "float",
-                  channels: 4,
-                  magFilter: gl.LINEAR,
-                  minFilter: gl.LINEAR,
-                }),
-              },
-            });
-          reprojectBuffer = n();
-          reprojectBackBuffer = n();
-          const i = makeTexture(gl, {
-              width: t,
-              height: a,
-              storage: "halfFloat",
-            }),
-            o = makeTexture(gl, { width: t, height: a, storage: "float" }),
-            r = (function (gl, t, a) {
-              const n = gl.createRenderbuffer(),
-                i = gl.RENDERBUFFER;
-              return (
-                gl.bindRenderbuffer(i, n),
-                gl.renderbufferStorage(
-                  gl.RENDERBUFFER,
-                  gl.DEPTH_COMPONENT24,
-                  t,
-                  a
-                ),
-                gl.bindRenderbuffer(i, null),
-                { target: i, texture: n }
-              );
-            })(gl, t, a),
-            s = () =>
-              makeFramebuffer(gl, {
-                color: {
-                  0: makeTexture(gl, {
-                    width: t,
-                    height: a,
-                    storage: "float",
-                  }),
-                  1: i,
-                  2: o,
-                },
-                depth: r,
-              });
-          gBuffer = s();
-          gBufferBack = s();
-        })(t, a);
+    function initFrameBuffers(width, height) {
+      hdrBuffer = makeFramebuffer(gl, {
+        color: {
+          0: makeTexture(gl, {
+            width,
+            height,
+            storage: "float",
+            magFilter: gl.LINEAR,
+            minFilter: gl.LINEAR,
+          }),
+        },
+      });
 
-      svgfPass.setSize(t, a);
-      toneMapPass.setSize(t, a);
-      fxaaPass.setSize(t, a);
+      lastToneMappedTexture = hdrBuffer.color[0];
+
+      const makeReprojectBuffer = () =>
+        makeFramebuffer(gl, {
+          color: {
+            0: makeTexture(gl, {
+              width,
+              height,
+              storage: "float",
+              magFilter: gl.LINEAR,
+              minFilter: gl.LINEAR,
+            }),
+            1: makeTexture(gl, {
+              width,
+              height,
+              storage: "float",
+              channels: 4,
+              magFilter: gl.LINEAR,
+              minFilter: gl.LINEAR,
+            }),
+          },
+        });
+
+      reprojectBuffer = makeReprojectBuffer();
+      reprojectBackBuffer = makeReprojectBuffer();
+
+      const normalBuffer = makeTexture(gl, {
+        width,
+        height,
+        storage: "halfFloat",
+      });
+
+      const faceNormalBuffer = makeTexture(gl, {
+        width,
+        height,
+        storage: "float",
+      });
+
+      const depthTarget = makeDepthTarget(gl, width, height);
+
+      const makeGBuffer = () =>
+        makeFramebuffer(gl, {
+          color: {
+            0: makeTexture(gl, {
+              width,
+              height,
+              storage: "float",
+            }),
+            1: normalBuffer,
+            2: faceNormalBuffer,
+          },
+          depth: depthTarget,
+        });
+
+      gBuffer = makeGBuffer();
+      gBufferBack = makeGBuffer();
+    }
+
+    function setSize(width, height) {
+      screenWidth = width;
+      screenHeight = height;
+      tileRender.setSize(width, height);
+      previewSize.setSize(width, height);
+
+      initFrameBuffers(width, height);
+
+      svgfPass.setSize(width, height);
+      toneMapPass.setSize(width, height);
+      fxaaPass.setSize(width, height);
       firstFrame = true;
     }
 

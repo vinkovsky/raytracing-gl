@@ -3943,100 +3943,129 @@ var __defProp = Object.defineProperty,
     };
   }
 
-  class he extends t.Light {
-    constructor(e, a, n = 10, i = 10) {
-      super(e, a),
-        (this.type = "RectAreaLight"),
-        (this.width = n),
-        (this.height = i),
-        (this.target = new t.Vector3());
+  class RectAreaLight extends THREE.Light {
+    constructor(color, intensity, width = 10, height = 10) {
+      super(color, intensity);
+      this.type = "RectAreaLight";
+      this.width = width;
+      this.height = height;
+      this.target = new THREE.Vector3();
     }
-    copy(e) {
-      super.copy(e), (this.width = e.width), (this.height = e.height);
-    }
-  }
-  class ve extends t.Light {
-    constructor(e, t, a, n) {
-      super(e, t), (this.type = "QuadLight"), (this.v1 = a), (this.v2 = n);
+    copy(source) {
+      super.copy(source);
+      this.width = source.width;
+      this.height = source.height;
     }
   }
-  class Ae extends t.Light {
-    constructor(e, t, a = 1) {
-      super(e, t), (this.type = "SphereAreaLight"), (this.radius = a);
+
+  class QuadLight extends THREE.Light {
+    constructor(color, intensity, v1, v2) {
+      super(color, intensity);
+      this.type = "QuadLight";
+      this.v1 = v1;
+      this.v2 = v2;
     }
   }
-  class _e extends t.Light {
-    constructor(e, t) {
-      super(e, t), (this.type = "PointLight");
+
+  class SphereAreaLight extends THREE.Light {
+    constructor(color, intensity, radius = 1) {
+      super(color, intensity);
+      this.type = "SphereAreaLight";
+      this.radius = radius;
     }
   }
-  class ge extends t.Light {
-    constructor(e, a) {
-      super(e, a),
-        (this.type = "DirectionalLight"),
-        (this.target = new t.Vector3());
+
+  class PointLight extends THREE.Light {
+    constructor(color, intensity) {
+      super(color, intensity);
+      this.type = "PointLight";
     }
   }
-  (e.DirectionalLight = ge),
-    (e.DisneyMaterial = DisneyMaterial),
-    (e.LGLTracerRenderer = class {
-      constructor(e = {}) {
-        (this.canvas = e.canvas || document.createElement("canvas")),
-          (this.gl = this.canvas.getContext("webgl2", {
-            alpha: e.canvasAlpha || !1,
-            depth: !0,
-            stencil: !1,
-            antialias: !1,
-            powerPreference: "high-performance",
-            failIfMajorPerformanceCaveat: !0,
-          })),
-          loadExtensions(this.gl, glRequiredExtensions),
-          (this.optionalExtensions = loadExtensions(
-            this.gl,
-            glOptionalExtensions
-          )),
-          (this._bounces = 2),
-          (this._envMapIntensity = 1),
-          (this._toneMapping = n.LinearToneMapping),
-          (this._movingDownsampling = !1),
-          (this._enableDenoise = !1),
-          (this._enableTemporalDenoise = !0),
-          (this._enableSpatialDenoise = !0),
-          (this._fullSampleCallback = null),
-          (this._enviromentVisible = !0),
-          (this.useTileRender = !1),
-          (this.renderWhenOffFocus = !0),
-          (this.useWorker = e.useWorker || !0),
-          (this.loadingCallback = e.loadingCallback || {
-            onProgress: (e) => console.log(e),
-            onComplete: (e) => console.log(e),
-          }),
-          (this._isBuilding = !0),
-          (this.needsUpdate = !1),
-          (this.size = new n.Vector2(this.canvas.width, this.canvas.height)),
-          (this.pixelRatio = 1),
-          (this.pipeline = null),
-          (this.currentTime = NaN),
-          (this.isValidTime = 1),
-          (this.lastFocus = !1),
-          (this.domElement = this.canvas);
-      }
-      static isSupported() {
-        const e = document
-          .createElement("canvas")
-          .getContext("webgl2", { failIfMajorPerformanceCaveat: !0 });
-        if (!e) return !1;
-        const t = i(e, r);
-        for (let a in t) if (!t[a]) return !1;
-        return !0;
-      }
-      async buildScene(e, t) {
-        const {
+
+  class DirectionalLight extends THREE.Light {
+    constructor(color, intensity) {
+      super(color, intensity);
+      this.type = "DirectionalLight";
+      this.target = new THREE.Vector3();
+    }
+  }
+
+  (e.LGLTracerRenderer = class {
+    constructor(e = {}) {
+      (this.canvas = e.canvas || document.createElement("canvas")),
+        (this.gl = this.canvas.getContext("webgl2", {
+          alpha: e.canvasAlpha || !1,
+          depth: !0,
+          stencil: !1,
+          antialias: !1,
+          powerPreference: "high-performance",
+          failIfMajorPerformanceCaveat: !0,
+        })),
+        loadExtensions(this.gl, glRequiredExtensions),
+        (this.optionalExtensions = loadExtensions(
+          this.gl,
+          glOptionalExtensions
+        )),
+        (this._bounces = 2),
+        (this._envMapIntensity = 1),
+        (this._toneMapping = n.LinearToneMapping),
+        (this._movingDownsampling = !1),
+        (this._enableDenoise = !1),
+        (this._enableTemporalDenoise = !0),
+        (this._enableSpatialDenoise = !0),
+        (this._fullSampleCallback = null),
+        (this._enviromentVisible = !0),
+        (this.useTileRender = !1),
+        (this.renderWhenOffFocus = !0),
+        (this.useWorker = e.useWorker || !0),
+        (this.loadingCallback = e.loadingCallback || {
+          onProgress: (e) => console.log(e),
+          onComplete: (e) => console.log(e),
+        }),
+        (this._isBuilding = !0),
+        (this.needsUpdate = !1),
+        (this.size = new n.Vector2(this.canvas.width, this.canvas.height)),
+        (this.pixelRatio = 1),
+        (this.pipeline = null),
+        (this.currentTime = NaN),
+        (this.isValidTime = 1),
+        (this.lastFocus = !1),
+        (this.domElement = this.canvas);
+    }
+    static isSupported() {
+      const e = document
+        .createElement("canvas")
+        .getContext("webgl2", { failIfMajorPerformanceCaveat: !0 });
+      if (!e) return !1;
+      const t = i(e, r);
+      for (let a in t) if (!t[a]) return !1;
+      return !0;
+    }
+    async buildScene(e, t) {
+      const {
+        gl: a,
+        optionalExtensions: n,
+        bounces: i,
+        size: o,
+        toneMapping: r,
+        envMapIntensity: s,
+        enviromentVisible: l,
+        movingDownsampling: f,
+        enableDenoise: d,
+        enableTemporalDenoise: c,
+        enableSpatialDenoise: u,
+        useWorker: p,
+        loadingCallback: m,
+      } = this;
+      (this._isBuilding = !0),
+        e.updateMatrixWorld(),
+        (this.pipeline = await makeRenderingPipeline({
           gl: a,
           optionalExtensions: n,
-          bounces: i,
-          size: o,
+          scene: e,
+          camera: t,
           toneMapping: r,
+          bounces: i,
           envMapIntensity: s,
           enviromentVisible: l,
           movingDownsampling: f,
@@ -4045,192 +4074,173 @@ var __defProp = Object.defineProperty,
           enableSpatialDenoise: u,
           useWorker: p,
           loadingCallback: m,
-        } = this;
-        (this._isBuilding = !0),
-          e.updateMatrixWorld(),
-          (this.pipeline = await makeRenderingPipeline({
-            gl: a,
-            optionalExtensions: n,
-            scene: e,
-            camera: t,
-            toneMapping: r,
-            bounces: i,
-            envMapIntensity: s,
-            enviromentVisible: l,
-            movingDownsampling: f,
-            enableDenoise: d,
-            enableTemporalDenoise: c,
-            enableSpatialDenoise: u,
-            useWorker: p,
-            loadingCallback: m,
-          })),
-          this.setSize(o.width, o.height),
-          (this._isBuilding = !1),
-          m &&
-            m.onComplete &&
-            "function" == typeof m.onComplete &&
-            m.onComplete("Complete!");
+        })),
+        this.setSize(o.width, o.height),
+        (this._isBuilding = !1),
+        m &&
+          m.onComplete &&
+          "function" == typeof m.onComplete &&
+          m.onComplete("Complete!");
+    }
+    set bounces(e) {
+      (this._bounces = e), this.pipeline && this.pipeline.updateBounces(e);
+    }
+    get bounces() {
+      return this._bounces;
+    }
+    set envMapIntensity(e) {
+      (e = Number(e)),
+        (this._envMapIntensity = e),
+        this.pipeline && this.pipeline.setEnvMapIntensity(e);
+    }
+    get envMapIntensity() {
+      return this._envMapIntensity;
+    }
+    set toneMapping(e) {
+      (this._toneMapping = e), this.pipeline && this.pipeline.setToneMapping(e);
+    }
+    get toneMapping() {
+      return this._toneMapping;
+    }
+    set enviromentVisible(e) {
+      (this._enviromentVisible = e),
+        this.pipeline && this.pipeline.setEnviromentVisible(e);
+    }
+    get enviromentVisible() {
+      return this._enviromentVisible;
+    }
+    set movingDownsampling(value) {
+      value = !!value;
+      this._movingDownsampling = value;
+      if (this.pipeline) {
+        this.pipeline.setMovingDownsampling(value);
       }
-      set bounces(e) {
-        (this._bounces = e), this.pipeline && this.pipeline.updateBounces(e);
+    }
+    get movingDownsampling() {
+      return this._movingDownsampling;
+    }
+    set enableDenoise(e) {
+      (e = !!e),
+        (this._enableDenoise = e),
+        this.pipeline && this.pipeline.setDenoiseStatus(e);
+    }
+    get enableDenoise() {
+      return this._enableDenoise;
+    }
+    set enableTemporalDenoise(e) {
+      (e = !!e),
+        (this._enableTemporalDenoise = e),
+        this.pipeline && this.pipeline.setTemporalDenoiseStatus(e);
+    }
+    get enableTemporalDenoise() {
+      return this._enableTemporalDenoise;
+    }
+    set enableSpatialDenoise(e) {
+      (e = !!e),
+        (this._enableSpatialDenoise = e),
+        this.pipeline && this.pipeline.setSpatialDenoiseStatus(e);
+    }
+    get enableSpatialDenoise() {
+      return this._enableSpatialDenoise;
+    }
+    set fullSampleCallback(e) {
+      e &&
+        "function" == typeof e &&
+        ((this._fullSampleCallback = e),
+        this.pipeline && this.pipeline.setfullSampleCallbackCallBack(e));
+    }
+    get fullSampleCallback() {
+      return this._fullSampleCallback;
+    }
+    updateEnvLight() {
+      this.pipeline && this.pipeline.updateEnvLight();
+    }
+    updateMeshLight() {
+      this.pipeline && this.pipeline.updateMeshLight();
+    }
+    setDenoiseColorBlendFactor(e) {
+      this.pipeline && this.pipeline.setDenoiseColorBlendFactor(e);
+    }
+    setDenoiseMomentBlendFactor(e) {
+      this.pipeline && this.pipeline.setDenoiseMomentBlendFactor(e);
+    }
+    setDenoiseColorFactor(e) {
+      this.pipeline && this.pipeline.setDenoiseColorFactor(e);
+    }
+    setDenoiseNormalFactor(e) {
+      this.pipeline && this.pipeline.setDenoiseNormalFactor(e);
+    }
+    setDenoisePositionFactor(e) {
+      this.pipeline && this.pipeline.setDenoisePositionFactor(e);
+    }
+    setDemodulateAlbedo(value) {
+      if (this.pipeline) {
+        this.pipeline.setDemodulateAlbedo(value);
       }
-      get bounces() {
-        return this._bounces;
-      }
-      set envMapIntensity(e) {
-        (e = Number(e)),
-          (this._envMapIntensity = e),
-          this.pipeline && this.pipeline.setEnvMapIntensity(e);
-      }
-      get envMapIntensity() {
-        return this._envMapIntensity;
-      }
-      set toneMapping(e) {
-        (this._toneMapping = e),
-          this.pipeline && this.pipeline.setToneMapping(e);
-      }
-      get toneMapping() {
-        return this._toneMapping;
-      }
-      set enviromentVisible(e) {
-        (this._enviromentVisible = e),
-          this.pipeline && this.pipeline.setEnviromentVisible(e);
-      }
-      get enviromentVisible() {
-        return this._enviromentVisible;
-      }
-      set movingDownsampling(value) {
-        value = !!value;
-        this._movingDownsampling = value;
+      this.needsUpdate = true;
+    }
+    getDenoiseFactors() {
+      if (this.pipeline) return this.pipeline.getDenoiseFactors();
+    }
+    setSize(e, t, a = !0) {
+      const { size: n, canvas: i, pipeline: o, pixelRatio: r } = this;
+      n.set(e, t),
+        (i.width = n.width * r),
+        (i.height = n.height * r),
+        a &&
+          ((i.style.width = `${n.width}px`),
+          (i.style.height = `${n.height}px`)),
+        this.pipeline && o.setSize(n.width * r, n.height * r);
+    }
+    getSize(e) {
+      const { size: t } = this;
+      return e || (e = new n.Vector2()), e.copy(t);
+    }
+    setPixelRatio(e) {
+      const { size: t } = this;
+      e && ((this.pixelRatio = e), this.setSize(t.width, t.height, !1));
+    }
+    getPixelRatio() {
+      return this.pixelRatio;
+    }
+    getTotalSamples() {
+      if (this.pipeline) return this.pipeline.getTotalSamplesRendered();
+    }
+    restartTimer() {
+      this.isValidTime = NaN;
+    }
+    render(e, t) {
+      if (!this._isBuilding)
         if (this.pipeline) {
-          this.pipeline.setMovingDownsampling(value);
-        }
-      }
-      get movingDownsampling() {
-        return this._movingDownsampling;
-      }
-      set enableDenoise(e) {
-        (e = !!e),
-          (this._enableDenoise = e),
-          this.pipeline && this.pipeline.setDenoiseStatus(e);
-      }
-      get enableDenoise() {
-        return this._enableDenoise;
-      }
-      set enableTemporalDenoise(e) {
-        (e = !!e),
-          (this._enableTemporalDenoise = e),
-          this.pipeline && this.pipeline.setTemporalDenoiseStatus(e);
-      }
-      get enableTemporalDenoise() {
-        return this._enableTemporalDenoise;
-      }
-      set enableSpatialDenoise(e) {
-        (e = !!e),
-          (this._enableSpatialDenoise = e),
-          this.pipeline && this.pipeline.setSpatialDenoiseStatus(e);
-      }
-      get enableSpatialDenoise() {
-        return this._enableSpatialDenoise;
-      }
-      set fullSampleCallback(e) {
-        e &&
-          "function" == typeof e &&
-          ((this._fullSampleCallback = e),
-          this.pipeline && this.pipeline.setfullSampleCallbackCallBack(e));
-      }
-      get fullSampleCallback() {
-        return this._fullSampleCallback;
-      }
-      updateEnvLight() {
-        this.pipeline && this.pipeline.updateEnvLight();
-      }
-      updateMeshLight() {
-        this.pipeline && this.pipeline.updateMeshLight();
-      }
-      setDenoiseColorBlendFactor(e) {
-        this.pipeline && this.pipeline.setDenoiseColorBlendFactor(e);
-      }
-      setDenoiseMomentBlendFactor(e) {
-        this.pipeline && this.pipeline.setDenoiseMomentBlendFactor(e);
-      }
-      setDenoiseColorFactor(e) {
-        this.pipeline && this.pipeline.setDenoiseColorFactor(e);
-      }
-      setDenoiseNormalFactor(e) {
-        this.pipeline && this.pipeline.setDenoiseNormalFactor(e);
-      }
-      setDenoisePositionFactor(e) {
-        this.pipeline && this.pipeline.setDenoisePositionFactor(e);
-      }
-      setDemodulateAlbedo(value) {
-        if (this.pipeline) {
-          this.pipeline.setDemodulateAlbedo(value);
-        }
-        this.needsUpdate = true;
-      }
-      getDenoiseFactors() {
-        if (this.pipeline) return this.pipeline.getDenoiseFactors();
-      }
-      setSize(e, t, a = !0) {
-        const { size: n, canvas: i, pipeline: o, pixelRatio: r } = this;
-        n.set(e, t),
-          (i.width = n.width * r),
-          (i.height = n.height * r),
-          a &&
-            ((i.style.width = `${n.width}px`),
-            (i.style.height = `${n.height}px`)),
-          this.pipeline && o.setSize(n.width * r, n.height * r);
-      }
-      getSize(e) {
-        const { size: t } = this;
-        return e || (e = new n.Vector2()), e.copy(t);
-      }
-      setPixelRatio(e) {
-        const { size: t } = this;
-        e && ((this.pixelRatio = e), this.setSize(t.width, t.height, !1));
-      }
-      getPixelRatio() {
-        return this.pixelRatio;
-      }
-      getTotalSamples() {
-        if (this.pipeline) return this.pipeline.getTotalSamplesRendered();
-      }
-      restartTimer() {
-        this.isValidTime = NaN;
-      }
-      render(e, t) {
-        if (!this._isBuilding)
-          if (this.pipeline) {
-            if (
-              (this.needsUpdate &&
-                ((this.needsUpdate = !1), this.pipeline.reset()),
-              !this.renderWhenOffFocus)
-            ) {
-              const e = document.hasFocus();
-              if (!e) return void (this.lastFocus = e);
-              e &&
-                !this.lastFocus &&
-                ((this.lastFocus = e), this.restartTimer());
-            }
-            (this.currentTime = performance.now()),
-              this.pipeline.time(this.isValidTime * this.currentTime),
-              (this.isValidTime = 1),
-              (this.currentTime = NaN),
-              t.updateMatrixWorld(),
-              this.useTileRender
-                ? this.pipeline.draw(t)
-                : this.pipeline.fullDraw(t);
-          } else console.error("The scene needs to be built first!");
-      }
-      dispose() {
-        (this.pipeline = null), this.domElement.remove();
-      }
-    }),
-    (e.PointLight = _e),
-    (e.QuadLight = ve),
-    (e.RectAreaLight = he),
-    (e.SphereAreaLight = Ae),
+          if (
+            (this.needsUpdate &&
+              ((this.needsUpdate = !1), this.pipeline.reset()),
+            !this.renderWhenOffFocus)
+          ) {
+            const e = document.hasFocus();
+            if (!e) return void (this.lastFocus = e);
+            e && !this.lastFocus && ((this.lastFocus = e), this.restartTimer());
+          }
+          (this.currentTime = performance.now()),
+            this.pipeline.time(this.isValidTime * this.currentTime),
+            (this.isValidTime = 1),
+            (this.currentTime = NaN),
+            t.updateMatrixWorld(),
+            this.useTileRender
+              ? this.pipeline.draw(t)
+              : this.pipeline.fullDraw(t);
+        } else console.error("The scene needs to be built first!");
+    }
+    dispose() {
+      (this.pipeline = null), this.domElement.remove();
+    }
+  }),
+    (e.DisneyMaterial = DisneyMaterial),
+    (e.DirectionalLight = DirectionalLight),
+    (e.PointLight = PointLight),
+    (e.QuadLight = QuadLight),
+    (e.RectAreaLight = RectAreaLight),
+    (e.SphereAreaLight = SphereAreaLight),
     Object.defineProperty(e, "__esModule", { value: !0 }),
     (e[Symbol.toStringTag] = "Module");
 });

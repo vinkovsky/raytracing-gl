@@ -5,15 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Document</title>
-    <script src="https://unpkg.com/three@0.136.0/build/three.js"></script>
-    <script src="https://unpkg.com/three@0.136.0/examples/js/loaders/GLTFLoader.js"></script>
-    <script src="https://unpkg.com/three@0.136.0/examples/js/loaders/RGBELoader.js"></script>
-    <script src="https://unpkg.com/three@0.136.0/examples/js/loaders/EXRLoader.js"></script>
 
-    <!-- <script src="https://unpkg.com/three@0.136.0/examples/js/loaders/TextureLoader.js"></script> -->
-    <script src="https://unpkg.com/three@0.136.0/examples/js/controls/OrbitControls.js"></script>
-    <script src="pathTracer.js"></script>
-    <!-- <script src="lglTracer.umd.js"></script> -->
     <style>
       body {
         margin: 0;
@@ -27,16 +19,23 @@
     </style>
   </head>
   <body>
-    <script>
-      const {
+    <script type="module">
+      import * as THREE from "../modules/three.js";
+      import { RGBELoader } from "./modules/RGBELoader.js";
+      import { GLTFLoader } from "./modules/GLTFLoader.js";
+      // import { EXRLoader } from "./modules/EXRLoader.js";
+      import { OrbitControls } from "./modules/OrbitControls.js";
+
+      import {
         RayTracingRenderer,
         RayTracingMaterial,
         DirectionalLight,
+        PointLight,
         QuadLight,
         RectAreaLight,
-        PointLight,
         SphereAreaLight,
-      } = LGLTracer;
+      } from "./RayTracingRenderer.js";
+
       async function ae() {
         let e = [];
         const i = [],
@@ -487,7 +486,7 @@
         -4.76420016089798
       );
 
-      const controls = new THREE.OrbitControls(camera, renderer.domElement);
+      const controls = new OrbitControls(camera, renderer.domElement);
       //  controls.enableDamping = true;
       const directionalLight = new DirectionalLight(0xffffff, 1);
       directionalLight.position.y = 1;
@@ -497,7 +496,7 @@
       renderer.setSize(window.innerWidth, window.innerHeight);
       async function init() {
         // Note that if it is after R136, it needs to be declared as FloatType
-        const rgbeLoader = new THREE.RGBELoader().setDataType(THREE.FloatType);
+        const rgbeLoader = new RGBELoader().setDataType(THREE.FloatType);
         const envMap = await new Promise((resolve) => {
           rgbeLoader.load(envMapPath, resolve);
         });
@@ -507,16 +506,16 @@
           rgbeLoader2.load(envMapPath2, resolve);
         });
 
-        const rgbeLoader3 = new THREE.EXRLoader().setDataType(THREE.FloatType);
-        const envMap3 = await new Promise((resolve) => {
-          rgbeLoader3.load(envMapPath3, resolve);
-        });
+        // const rgbeLoader3 = new EXRLoader().setDataType(THREE.FloatType);
+        // const envMap3 = await new Promise((resolve) => {
+        //   rgbeLoader3.load(envMapPath3, resolve);
+        // });
 
-        scene.environment = envMap3;
+        scene.environment = envMap;
 
         // scene.environment = new THREE.Color("white");
 
-        const gltfLoader = new THREE.GLTFLoader();
+        const gltfLoader = new GLTFLoader();
         const gltfInfo = await new Promise((resolve) => {
           gltfLoader.load(gltfModelPath, resolve);
         });
@@ -547,14 +546,14 @@
         const radius = 2;
         const sphereAreaLight = new SphereAreaLight(0xffffff, 100, radius);
         sphereAreaLight.position.set(0, 5, 0);
-         scene.add(sphereAreaLight);
+        scene.add(sphereAreaLight);
         sphereAreaLight.visible = false;
         const width = 10;
         const height = 10;
         const rectAreaLight = new RectAreaLight(0xffffff, 100, width, height);
         rectAreaLight.position.set(10, 12, 0);
         rectAreaLight.target.set(0, 4, 0);
-          scene.add(rectAreaLight);
+        scene.add(rectAreaLight);
         rectAreaLight.visible = false;
         const quad = new QuadLight();
         quad.color = new THREE.Color("white");
@@ -562,15 +561,15 @@
         quad.v2 = new THREE.Vector3(7, 1, 1);
         quad.position.set(0, 10, 0);
 
-         scene.add(quad);
+        scene.add(quad);
 
         const pointLight = new PointLight(0xffffff, 1);
         pointLight.position.set(2, 5, 0);
-          scene.add(pointLight);
+        scene.add(pointLight);
 
-         scene.add(directionalLight, directionalLight2);
+        scene.add(directionalLight, directionalLight2);
 
-         scene.add(sphereMesh);
+        scene.add(sphereMesh);
 
         await renderer.buildScene(scene, camera).then(() => {
           tick();

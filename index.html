@@ -29,8 +29,8 @@
   <body>
     <script>
       const {
-        LGLTracerRenderer,
-        DisneyMaterial,
+        RayTracingRenderer,
+        RayTracingMaterial,
         DirectionalLight,
         QuadLight,
         RectAreaLight,
@@ -78,18 +78,18 @@
       }
       async function oe() {
         const e = await ae(),
-          i = new DisneyMaterial({
+          i = new RayTracingMaterial({
             color: new THREE.Color(0.005, 0.005, 0.005),
             roughness: 0.4472,
           }),
-          l = new DisneyMaterial({
+          l = new RayTracingMaterial({
             color: new THREE.Color(1, 1, 1),
             roughness: 0.3872,
             metalness: 1,
             subsurface: 0.3,
             atDistance: 0.4,
           }),
-          r = new DisneyMaterial({
+          r = new RayTracingMaterial({
             color: new THREE.Color(0.713, 0.8, 0.8),
             transmission: 1,
             roughness: 0.01,
@@ -98,41 +98,41 @@
             subsurface: 0.3,
             atDistance: 0.4,
           }),
-          m = new DisneyMaterial({
+          m = new RayTracingMaterial({
             color: new THREE.Color(0.787, 0.758, 0.737),
             roughness: 0,
             clearcoat: 1,
             subsurface: 0.3,
             atDistance: 0.4,
           }),
-          P = new DisneyMaterial({
+          P = new RayTracingMaterial({
             map: e[16],
             roughness: 0.2236,
             // transmission: 1,
             subsurface: 1,
           }),
-          x = new DisneyMaterial({
+          x = new RayTracingMaterial({
             map: e[16],
             roughness: 0.3162,
             transmission: 1,
           }),
-          R = new DisneyMaterial({
+          R = new RayTracingMaterial({
             map: e[17],
             transmission: 1,
           }),
-          h = new DisneyMaterial({
+          h = new RayTracingMaterial({
             color: new THREE.Color(0.842, 0.842, 0.842),
             roughness: 0.44721,
             subsurface: 0.3,
             atDistance: 0.4,
           }),
-          j = new DisneyMaterial({
+          j = new RayTracingMaterial({
             color: new THREE.Color(0.016, 0.047, 0.002),
             roughness: 0.44721,
             subsurface: 0.3,
             atDistance: 0.4,
           }),
-          g = new DisneyMaterial({
+          g = new RayTracingMaterial({
             color: new THREE.Color(0.009, 0.009, 0.009),
             roughness: 0.44721,
             clearcoat: 1,
@@ -141,7 +141,7 @@
             transmission: 1,
             extinction: new THREE.Color(0.009, 0.009, 0.009),
           }),
-          t = new DisneyMaterial({
+          t = new RayTracingMaterial({
             roughness: 0,
             metalness: 1,
             subsurface: 1,
@@ -149,61 +149,61 @@
             transmission: 1,
             extinction: new THREE.Color(0.009, 0.009, 0.009),
           }),
-          p = new DisneyMaterial({
+          p = new RayTracingMaterial({
             map: e[18],
             subsurface: 0.3,
             atDistance: 0.4,
           }),
-          _ = new DisneyMaterial({
+          _ = new RayTracingMaterial({
             map: e[19],
             subsurface: 0.3,
             atDistance: 0.4,
           }),
-          z = new DisneyMaterial({
+          z = new RayTracingMaterial({
             map: e[0],
             subsurface: 0.3,
             atDistance: 0.4,
           }),
-          S = new DisneyMaterial({
+          S = new RayTracingMaterial({
             map: e[1],
           }),
-          w = new DisneyMaterial({
+          w = new RayTracingMaterial({
             map: e[2],
           }),
-          L = new DisneyMaterial({
+          L = new RayTracingMaterial({
             map: e[3],
           }),
-          E = new DisneyMaterial({
+          E = new RayTracingMaterial({
             map: e[4],
           }),
-          y = new DisneyMaterial({
+          y = new RayTracingMaterial({
             map: e[5],
           }),
-          D = new DisneyMaterial({
+          D = new RayTracingMaterial({
             map: e[6],
           }),
-          T = new DisneyMaterial({
+          T = new RayTracingMaterial({
             map: e[7],
           }),
-          v = new DisneyMaterial({
+          v = new RayTracingMaterial({
             map: e[8],
           }),
-          A = new DisneyMaterial({
+          A = new RayTracingMaterial({
             map: e[9],
           }),
-          G = new DisneyMaterial({
+          G = new RayTracingMaterial({
             map: e[10],
           }),
-          F = new DisneyMaterial({
+          F = new RayTracingMaterial({
             map: e[11],
           }),
-          I = new DisneyMaterial({
+          I = new RayTracingMaterial({
             map: e[12],
           }),
-          W = new DisneyMaterial({
+          W = new RayTracingMaterial({
             map: e[13],
           }),
-          O = new DisneyMaterial({
+          O = new RayTracingMaterial({
             map: e[14],
           });
         //   Oe = new DisneyMaterial({
@@ -432,30 +432,32 @@
 
       const gltfModelPath = "./assets/diningRoom/scene.gltf";
 
-      const renderer = new LGLTracerRenderer({
+      const renderer = new RayTracingRenderer({
         canvasAlpha: true,
       });
 
       renderer.useWorker = true;
       renderer.bounces = 2;
       renderer.envMapIntensity = 2;
-      renderer.enviromentVisible = false;
+      renderer.enviromentVisible = true;
       renderer.enableDenoise = true;
       renderer.enableTemporalDenoise = true;
       renderer.enableSpatialDenoise = true;
       renderer.movingDownsampling = true;
-      renderer.renderWhenOffFocus = true;
+      renderer.renderWhenOffFocus = false;
       renderer.useTileRender = false;
       renderer.setDenoiseColorBlendFactor(0.6);
       renderer.setDenoiseColorFactor(0.6);
       renderer.setDenoiseMomentBlendFactor(0.6);
       renderer.setDenoisePositionFactor(0.4);
-      renderer.toneMapping = THREE.LinearToneMapping;
+      renderer.setDenoiseNormalFactor(0.1);
+      renderer.setDemodulateAlbedo(0.1);
+      // renderer.toneMapping = THREE.LinearToneMapping;
 
       setTimeout(() => {
         renderer.toneMapping = THREE.ReinhardToneMapping;
         // renderer.needsUpdate = true;
-      }, 5000);
+      }, 6000);
       // renderer.toneMappingExposure = 20;
 
       document.body.appendChild(renderer.domElement);
@@ -534,25 +536,25 @@
             if (t.isMesh && t.material) {
               if (t.material.isRayTracingMaterial) return;
               t.material.isMeshStandardMaterial
-                ? (t.material = new DisneyMaterial().fromStandardMaterial(
+                ? (t.material = new RayTracingMaterial().fromStandardMaterial(
                     t.material
                   ))
-                : (t.material = new DisneyMaterial());
+                : (t.material = new RayTracingMaterial());
             }
           });
 
         scene.add(gltfInfo.scene);
         const radius = 2;
-        const sphereAreaLight = new SphereAreaLight(0xeee, 100, radius);
+        const sphereAreaLight = new SphereAreaLight(0xffffff, 100, radius);
         sphereAreaLight.position.set(0, 5, 0);
-        scene.add(sphereAreaLight);
+         scene.add(sphereAreaLight);
         sphereAreaLight.visible = false;
         const width = 10;
         const height = 10;
-        const rectAreaLight = new RectAreaLight(0xeee, 100, width, height);
+        const rectAreaLight = new RectAreaLight(0xffffff, 100, width, height);
         rectAreaLight.position.set(10, 12, 0);
         rectAreaLight.target.set(0, 4, 0);
-        scene.add(rectAreaLight);
+          scene.add(rectAreaLight);
         rectAreaLight.visible = false;
         const quad = new QuadLight();
         quad.color = new THREE.Color("white");
@@ -560,15 +562,15 @@
         quad.v2 = new THREE.Vector3(7, 1, 1);
         quad.position.set(0, 10, 0);
 
-        // scene.add(quad);
+         scene.add(quad);
 
         const pointLight = new PointLight(0xffffff, 1);
         pointLight.position.set(2, 5, 0);
-        scene.add(pointLight);
+          scene.add(pointLight);
 
-        scene.add(directionalLight, directionalLight2);
+         scene.add(directionalLight, directionalLight2);
 
-        scene.add(sphereMesh);
+         scene.add(sphereMesh);
 
         await renderer.buildScene(scene, camera).then(() => {
           tick();

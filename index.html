@@ -34,7 +34,7 @@
         QuadLight,
         RectAreaLight,
         SphereAreaLight,
-      } from "./RayTracingRenderer.js";
+      } from "./src/RayTracingRenderer.js";
 
       async function ae() {
         let e = [];
@@ -435,7 +435,7 @@
         canvasAlpha: true,
       });
 
-      renderer.useWorker = true;
+      renderer.useWorker = false;
       renderer.bounces = 2;
       renderer.envMapIntensity = 2;
       renderer.enviromentVisible = true;

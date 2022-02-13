@@ -1,4 +1,4 @@
-import * as THREE from "./modules/three.js";
+import * as THREE from "../modules/three.js";
 
 //fullscreenQuad.vert
 var fullscreenQuad = {

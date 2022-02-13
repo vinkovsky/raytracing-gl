@@ -82,6 +82,13 @@ export async function makeRenderingPipeline({
 
   const lastCamera = new PerspectiveCamera();
 
+  const noiseImage = new Image();
+  noiseImage.src = noiseBase64;
+  noiseImage.onload = () => {
+    rayTracePass.setNoise(noiseImage);
+    ready = true;
+  };
+
   let frameTime;
   let elapsedFrameTime;
 
@@ -93,8 +100,6 @@ export async function makeRenderingPipeline({
 
   let firstFrame = true;
 
-  let sampleRenderedCallback = () => {};
-
   let screenWidth = 0;
   let screenHeight = 0;
 
@@ -104,6 +109,79 @@ export async function makeRenderingPipeline({
   let reprojectBuffer;
   let reprojectBackBuffer;
   let lastToneMappedTexture;
+
+  let sampleRenderedCallback = () => {};
+
+  function initFrameBuffers(width, height) {
+    hdrBuffer = makeFramebuffer(gl, {
+      color: {
+        0: makeTexture(gl, {
+          width,
+          height,
+          storage: "float",
+          magFilter: gl.LINEAR,
+          minFilter: gl.LINEAR,
+        }),
+      },
+    });
+
+    lastToneMappedTexture = hdrBuffer.color[0];
+
+    const makeReprojectBuffer = () =>
+      makeFramebuffer(gl, {
+        color: {
+          0: makeTexture(gl, {
+            width,
+            height,
+            storage: "float",
+            magFilter: gl.LINEAR,
+            minFilter: gl.LINEAR,
+          }),
+          1: makeTexture(gl, {
+            width,
+            height,
+            storage: "float",
+            channels: 4,
+            magFilter: gl.LINEAR,
+            minFilter: gl.LINEAR,
+          }),
+        },
+      });
+
+    reprojectBuffer = makeReprojectBuffer();
+    reprojectBackBuffer = makeReprojectBuffer();
+
+    const normalBuffer = makeTexture(gl, {
+      width,
+      height,
+      storage: "halfFloat",
+    });
+
+    const faceNormalBuffer = makeTexture(gl, {
+      width,
+      height,
+      storage: "float",
+    });
+
+    const depthTarget = makeDepthTarget(gl, width, height);
+
+    const makeGBuffer = () =>
+      makeFramebuffer(gl, {
+        color: {
+          0: makeTexture(gl, {
+            width,
+            height,
+            storage: "float",
+          }),
+          1: normalBuffer,
+          2: faceNormalBuffer,
+        },
+        depth: depthTarget,
+      });
+
+    gBuffer = makeGBuffer();
+    gBufferBack = makeGBuffer();
+  }
 
   function swapReprojectBuffer() {
     let temp = reprojectBuffer;
@@ -123,13 +201,6 @@ export async function makeRenderingPipeline({
     reprojectPass.setDemodulateAlbedo(val);
     svgfPass.setDemodulateAlbedo(val);
   }
-
-  const noiseImage = new Image();
-  noiseImage.src = noiseBase64;
-  noiseImage.onload = () => {
-    rayTracePass.setNoise(noiseImage);
-    ready = true;
-  };
 
   setDemodulateAlbedo(false);
 
@@ -286,9 +357,7 @@ export async function makeRenderingPipeline({
     if (isLastTile) {
       if (enableDenoise && (enableTemporalDenoise || enableSpatialDenoise)) {
         lastToneMappedTexture = hdrBuffer.color[0];
-
         denoiseToneMapToScreen();
-
         lastToneMappedTexture = hdrBuffer.color[0];
       } else {
         toneMapToScreen(hdrBuffer.color[0]);
@@ -390,80 +459,10 @@ export async function makeRenderingPipeline({
     }
   }
 
-  function initFrameBuffers(width, height) {
-    hdrBuffer = makeFramebuffer(gl, {
-      color: {
-        0: makeTexture(gl, {
-          width,
-          height,
-          storage: "float",
-          magFilter: gl.LINEAR,
-          minFilter: gl.LINEAR,
-        }),
-      },
-    });
-
-    lastToneMappedTexture = hdrBuffer.color[0];
-
-    const makeReprojectBuffer = () =>
-      makeFramebuffer(gl, {
-        color: {
-          0: makeTexture(gl, {
-            width,
-            height,
-            storage: "float",
-            magFilter: gl.LINEAR,
-            minFilter: gl.LINEAR,
-          }),
-          1: makeTexture(gl, {
-            width,
-            height,
-            storage: "float",
-            channels: 4,
-            magFilter: gl.LINEAR,
-            minFilter: gl.LINEAR,
-          }),
-        },
-      });
-
-    reprojectBuffer = makeReprojectBuffer();
-    reprojectBackBuffer = makeReprojectBuffer();
-
-    const normalBuffer = makeTexture(gl, {
-      width,
-      height,
-      storage: "halfFloat",
-    });
-
-    const faceNormalBuffer = makeTexture(gl, {
-      width,
-      height,
-      storage: "float",
-    });
-
-    const depthTarget = makeDepthTarget(gl, width, height);
-
-    const makeGBuffer = () =>
-      makeFramebuffer(gl, {
-        color: {
-          0: makeTexture(gl, {
-            width,
-            height,
-            storage: "float",
-          }),
-          1: normalBuffer,
-          2: faceNormalBuffer,
-        },
-        depth: depthTarget,
-      });
-
-    gBuffer = makeGBuffer();
-    gBufferBack = makeGBuffer();
-  }
-
   function setSize(width, height) {
     screenWidth = width;
     screenHeight = height;
+
     tileRender.setSize(width, height);
     previewSize.setSize(width, height);
 
@@ -472,6 +471,7 @@ export async function makeRenderingPipeline({
     svgfPass.setSize(width, height);
     toneMapPass.setSize(width, height);
     fxaaPass.setSize(width, height);
+
     firstFrame = true;
   }
 
@@ -484,6 +484,7 @@ export async function makeRenderingPipeline({
   function reset() {
     setStrataCount = 0;
     tileRender.reset();
+
     clearBuffer(hdrBuffer);
     clearBuffer(reprojectBuffer);
     clearBuffer(reprojectBackBuffer);

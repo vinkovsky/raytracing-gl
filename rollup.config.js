@@ -39,7 +39,7 @@ export default [
   {
     input: "./src/main.js",
     output: {
-      file: "build/rt-renderer.js",
+      file: "dist/rt-renderer.js",
       name: "rt-renderer",
       globals: {
         three: "THREE",

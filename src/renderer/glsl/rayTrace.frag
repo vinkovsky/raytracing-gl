@@ -1,3 +1,5 @@
+import { unrollLoop } from '../glslUtil';
+
 export default {
   source: (e) => `
       #define PI 3.14159265359

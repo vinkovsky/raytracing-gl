@@ -1,5 +1,11 @@
 node_modules
 
+.vscode
+
+.gitattributes
+
 .yarn-integrity
 
 yarn-lock
+
+dist

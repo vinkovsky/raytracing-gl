@@ -9,7 +9,7 @@
     "moduleResolution": "Node",
     "esModuleInterop": true,
     "declaration": true,
-    "declarationDir": "build",
+    "declarationDir": "dist",
     "skipLibCheck": true,
     "removeComments": false,
     "baseUrl": "."

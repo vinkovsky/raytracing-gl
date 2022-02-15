@@ -1,10 +1,10 @@
-import * as THREE from "../../modules/three.js";
+import * as THREE from "three";
 
-import { makeRenderPass } from "./RenderPass.js";
-import { makeFramebuffer } from "./FrameBuffer.js";
-import { makeTexture } from "./Texture.js";
+import { makeRenderPass } from "./RenderPass";
+import { makeFramebuffer } from "./FrameBuffer";
+import { makeTexture } from "./Texture";
 
-import { fragment } from "./glsl/toneMap.js";
+import { fragment } from "./glsl/toneMap";
 
 const toneMapFunctions = {
   [THREE.LinearToneMapping]: 0,

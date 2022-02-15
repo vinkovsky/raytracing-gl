@@ -1,4 +1,4 @@
-import { Light } from "../modules/three.js";
+import { Light } from "three";
 
 export class SphereAreaLight extends Light {
   constructor(color, intensity, radius = 1) {

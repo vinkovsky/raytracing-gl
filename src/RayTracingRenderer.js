@@ -1,7 +1,7 @@
-import * as THREE from "../modules/three.js";
+import * as THREE from "three";
 
-import { makeRenderingPipeline } from "./renderer/RenderingPipeline.js";
-import { loadExtensions } from "./renderer/glUtil.js";
+import { makeRenderingPipeline } from "./renderer/RenderingPipeline";
+import { loadExtensions } from "./renderer/glUtil";
 
 //RayTracingRenderer
 const glRequiredExtensions = [

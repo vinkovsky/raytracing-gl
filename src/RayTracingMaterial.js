@@ -1,4 +1,4 @@
-import { Material, Vector2, Color } from "../modules/three.js";
+import { Material, Vector2, Color } from "three";
 
 export class RayTracingMaterial extends Material {
   constructor(parameters) {

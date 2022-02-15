@@ -1,11 +1,12 @@
-import { createBvh } from "./bvhCreation.js";
-import { generateBackgroundMapFromSceneBackground } from "./envMapCreation.js";
-import { envMapDistribution } from "./envMapDistribution.js";
-import { fragment } from "./glsl/rayTrace.js";
-import { makeRenderPass } from "./RenderPass.js";
-import { makeStratifiedSamplerCombined } from "./StratifiedSamplerCombined.js";
-import { makeTexture } from "./Texture.js";
-import { clamp } from "./util.js";
+import { createBvh } from "./bvhCreation";
+import { generateBackgroundMapFromSceneBackground } from "./envMapCreation";
+import { envMapDistribution } from "./envMapDistribution";
+import { makeRenderPass } from "./RenderPass";
+import { makeStratifiedSamplerCombined } from "./StratifiedSamplerCombined";
+import { makeTexture } from "./Texture";
+import { clamp } from "./util";
+
+import { fragment } from "./glsl/rayTrace";
 
 export async function makeRayTracePass(
   gl,

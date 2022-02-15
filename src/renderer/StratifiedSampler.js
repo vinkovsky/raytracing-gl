@@ -18,7 +18,7 @@ The fractional part is the random number.
 To obtain the stratified sample between [0, 1), divide the returned sample by the stratum count.
 */
 
-import { shuffle } from "./util.js";
+import { shuffle } from "./util";
 
 export function makeStratifiedSampler(strataCount, dimensions) {
   const strata = [];

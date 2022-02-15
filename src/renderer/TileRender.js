@@ -1,6 +1,6 @@
 // TileRender is based on the concept of a compute shader's work group.
 
-import { clamp } from "./util.js";
+import { clamp } from "./util";
 
 // Sampling the scene with the RayTracingRenderer can be very slow (<1 fps).
 // This overworks the GPU and tends to lock up the OS, making it unresponsive.

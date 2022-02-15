@@ -1,4 +1,4 @@
-import { Light } from "../modules/three.js";
+import { Light } from "three";
 
 export class QuadLight extends Light {
   constructor(color, intensity, v1, v2) {

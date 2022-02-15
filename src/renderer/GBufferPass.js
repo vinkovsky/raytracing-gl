@@ -1,6 +1,8 @@
-import { Matrix4 } from "../../modules/three.js";
-import { makeRenderPass } from "./RenderPass.js";
-import { vertex, fragment } from "./glsl/gBuffer.js";
+import { Matrix4 } from "three";
+
+import { makeRenderPass } from "./RenderPass";
+
+import { vertex, fragment } from "./glsl/gBuffer";
 
 export function makeGBufferPass(gl, { materialBuffer, mergedMesh }) {
   const renderPass = makeRenderPass(gl, {

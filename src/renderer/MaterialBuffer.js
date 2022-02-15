@@ -1,12 +1,13 @@
-import { interleave } from "./decomposeScene.js";
-import materialBufferChunk from "./glsl/chunks/materialBuffer.js";
-import { makeUniformBuffer } from "./UniformBuffer.js";
-import { makeRenderPass } from "./RenderPass.js";
-import { makeTexture } from "./Texture.js";
+import { interleave } from "./decomposeScene";
+import { makeUniformBuffer } from "./UniformBuffer";
+import { makeRenderPass } from "./RenderPass";
+import { makeTexture } from "./Texture";
 import {
   getTexturesFromMaterials,
   mergeTexturesFromMaterials,
-} from "./texturesFromMaterials.js";
+} from "./texturesFromMaterials";
+
+import materialBufferChunk from "./glsl/chunks/materialBuffer";
 
 export function makeMaterialBuffer(gl, materials) {
   const maps = getTexturesFromMaterials(materials, [

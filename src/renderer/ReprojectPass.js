@@ -1,7 +1,8 @@
-import { Matrix4 } from "../../modules/three.js";
+import { Matrix4 } from "three";
 
-import { fragment } from "./glsl/reproject.js";
-import { makeRenderPass } from "./RenderPass.js";
+import { makeRenderPass } from "./RenderPass";
+
+import { fragment } from "./glsl/reproject";
 
 export function makeReprojectPass(e, params) {
   const { fullscreenQuad, maxReprojectedSamples } = params;

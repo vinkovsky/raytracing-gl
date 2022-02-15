@@ -1,4 +1,4 @@
-import { bvhAccel, flattenBvh } from "./bvhAccel.js";
+import { bvhAccel, flattenBvh } from "./bvhAccel";
 
 export function createBvh(geometry, useWorker = true) {
   if (useWorker && window.Worker) {

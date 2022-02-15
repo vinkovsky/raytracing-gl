@@ -1,4 +1,4 @@
-import { BufferGeometry, BufferAttribute } from "../../modules/three.js";
+import { BufferGeometry, BufferAttribute } from "three";
 
 export function mergeMeshesToGeometry(meshes) {
   let vertexCount = 0;

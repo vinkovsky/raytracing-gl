@@ -1,4 +1,4 @@
-import { clamp } from "./util.js";
+import { clamp } from "./util";
 
 export function makeTexture(gl, params) {
   let {

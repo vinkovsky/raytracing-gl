@@ -5,7 +5,11 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Document</title>
-
+    <script src="/node_modules/three/build/three.js"></script>
+    <script src="/node_modules/three/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="/node_modules/three/examples/js/controls/OrbitControls.js"></script>
+    <script src="/node_modules/three/examples/js/loaders/RGBELoader.js"></script>
+    <script src="/build/rt-renderer.js"></script>
     <style>
       body {
         margin: 0;
@@ -19,21 +23,21 @@
     </style>
   </head>
   <body>
-    <script type="module">
-      import * as THREE from "../modules/three.js";
-      import { RGBELoader } from "./modules/RGBELoader.js";
-      import { GLTFLoader } from "./modules/GLTFLoader.js";
-      import { OrbitControls } from "./modules/OrbitControls.js";
+    <script>
+      // import * as THREE from "./node_modules/three/build/three.js";
+      // import { RGBELoader } from "./node_modules/three/examples/jsm/loaders/RGBELoader.js";
+      // import { GLTFLoader } from "./node_modules/three/examples/jsm/loaders/GLTFLoader.js";
+      // import { OrbitControls } from "./node_modules/three/examples/jsm/controls/OrbitControls.js";
 
-      import {
-        RayTracingRenderer,
-        RayTracingMaterial,
-        DirectionalLight,
-        PointLight,
-        QuadLight,
-        RectAreaLight,
-        SphereAreaLight,
-      } from "./build/rt-renderer.js";
+      // import {
+      //   RayTracingRenderer,
+      //   RayTracingMaterial,
+      //   DirectionalLight,
+      //   PointLight,
+      //   QuadLight,
+      //   RectAreaLight,
+      //   SphereAreaLight,
+      // } from "./build/rt-renderer.js";
 
       async function ae() {
         let e = [];
@@ -76,18 +80,18 @@
       }
       async function oe() {
         const e = await ae(),
-          i = new RayTracingMaterial({
+          i = new THREE.RayTracingMaterial({
             color: new THREE.Color(0.005, 0.005, 0.005),
             roughness: 0.4472,
           }),
-          l = new RayTracingMaterial({
+          l = new THREE.RayTracingMaterial({
             color: new THREE.Color(1, 1, 1),
             roughness: 0.3872,
             metalness: 1,
             subsurface: 0.3,
             atDistance: 0.4,
           }),
-          r = new RayTracingMaterial({
+          r = new THREE.RayTracingMaterial({
             color: new THREE.Color(0.713, 0.8, 0.8),
             transmission: 1,
             roughness: 0.01,
@@ -96,41 +100,41 @@
             subsurface: 0.3,
             atDistance: 0.4,
           }),
-          m = new RayTracingMaterial({
+          m = new THREE.RayTracingMaterial({
             color: new THREE.Color(0.787, 0.758, 0.737),
             roughness: 0,
             clearcoat: 1,
             subsurface: 0.3,
             atDistance: 0.4,
           }),
-          P = new RayTracingMaterial({
+          P = new THREE.RayTracingMaterial({
             map: e[16],
             roughness: 0.2236,
             // transmission: 1,
             subsurface: 1,
           }),
-          x = new RayTracingMaterial({
+          x = new THREE.RayTracingMaterial({
             map: e[16],
             roughness: 0.3162,
             transmission: 1,
           }),
-          R = new RayTracingMaterial({
+          R = new THREE.RayTracingMaterial({
             map: e[17],
             transmission: 1,
           }),
-          h = new RayTracingMaterial({
+          h = new THREE.RayTracingMaterial({
             color: new THREE.Color(0.842, 0.842, 0.842),
             roughness: 0.44721,
             subsurface: 0.3,
             atDistance: 0.4,
           }),
-          j = new RayTracingMaterial({
+          j = new THREE.RayTracingMaterial({
             color: new THREE.Color(0.016, 0.047, 0.002),
             roughness: 0.44721,
             subsurface: 0.3,
             atDistance: 0.4,
           }),
-          g = new RayTracingMaterial({
+          g = new THREE.RayTracingMaterial({
             color: new THREE.Color(0.009, 0.009, 0.009),
             roughness: 0.44721,
             clearcoat: 1,
@@ -139,7 +143,7 @@
             transmission: 1,
             extinction: new THREE.Color(0.009, 0.009, 0.009),
           }),
-          t = new RayTracingMaterial({
+          t = new THREE.RayTracingMaterial({
             roughness: 0,
             metalness: 1,
             subsurface: 1,
@@ -147,61 +151,61 @@
             transmission: 1,
             extinction: new THREE.Color(0.009, 0.009, 0.009),
           }),
-          p = new RayTracingMaterial({
+          p = new THREE.RayTracingMaterial({
             map: e[18],
             subsurface: 0.3,
             atDistance: 0.4,
           }),
-          _ = new RayTracingMaterial({
+          _ = new THREE.RayTracingMaterial({
             map: e[19],
             subsurface: 0.3,
             atDistance: 0.4,
           }),
-          z = new RayTracingMaterial({
+          z = new THREE.RayTracingMaterial({
             map: e[0],
             subsurface: 0.3,
             atDistance: 0.4,
           }),
-          S = new RayTracingMaterial({
+          S = new THREE.RayTracingMaterial({
             map: e[1],
           }),
-          w = new RayTracingMaterial({
+          w = new THREE.RayTracingMaterial({
             map: e[2],
           }),
-          L = new RayTracingMaterial({
+          L = new THREE.RayTracingMaterial({
             map: e[3],
           }),
-          E = new RayTracingMaterial({
+          E = new THREE.RayTracingMaterial({
             map: e[4],
           }),
-          y = new RayTracingMaterial({
+          y = new THREE.RayTracingMaterial({
             map: e[5],
           }),
-          D = new RayTracingMaterial({
+          D = new THREE.RayTracingMaterial({
             map: e[6],
           }),
-          T = new RayTracingMaterial({
+          T = new THREE.RayTracingMaterial({
             map: e[7],
           }),
-          v = new RayTracingMaterial({
+          v = new THREE.RayTracingMaterial({
             map: e[8],
           }),
-          A = new RayTracingMaterial({
+          A = new THREE.RayTracingMaterial({
             map: e[9],
           }),
-          G = new RayTracingMaterial({
+          G = new THREE.RayTracingMaterial({
             map: e[10],
           }),
-          F = new RayTracingMaterial({
+          F = new THREE.RayTracingMaterial({
             map: e[11],
           }),
-          I = new RayTracingMaterial({
+          I = new THREE.RayTracingMaterial({
             map: e[12],
           }),
-          W = new RayTracingMaterial({
+          W = new THREE.RayTracingMaterial({
             map: e[13],
           }),
-          O = new RayTracingMaterial({
+          O = new THREE.RayTracingMaterial({
             map: e[14],
           });
         //   Oe = new DisneyMaterial({
@@ -430,7 +434,7 @@
 
       const gltfModelPath = "./assets/diningRoom/scene.gltf";
 
-      const renderer = new RayTracingRenderer({
+      const renderer = new THREE.RayTracingRenderer({
         canvasAlpha: true,
       });
 
@@ -485,17 +489,17 @@
         -4.76420016089798
       );
 
-      const controls = new OrbitControls(camera, renderer.domElement);
+      const controls = new THREE.OrbitControls(camera, renderer.domElement);
       //  controls.enableDamping = true;
-      const directionalLight = new DirectionalLight(0xffffff, 1);
+      const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
       directionalLight.position.y = 1;
-      const directionalLight2 = new DirectionalLight(0xffff33, 1);
+      const directionalLight2 = new THREE.DirectionalLight(0xffff33, 1);
       directionalLight.position.y = 10;
 
       renderer.setSize(window.innerWidth, window.innerHeight);
       async function init() {
         // Note that if it is after R136, it needs to be declared as FloatType
-        const rgbeLoader = new RGBELoader().setDataType(THREE.FloatType);
+        const rgbeLoader = new THREE.RGBELoader().setDataType(THREE.FloatType);
         const envMap = await new Promise((resolve) => {
           rgbeLoader.load(envMapPath, resolve);
         });
@@ -514,7 +518,7 @@
 
         // scene.environment = new THREE.Color("white");
 
-        const gltfLoader = new GLTFLoader();
+        const gltfLoader = new THREE.GLTFLoader();
         const gltfInfo = await new Promise((resolve) => {
           gltfLoader.load(gltfModelPath, resolve);
         });
@@ -534,27 +538,37 @@
             if (t.isMesh && t.material) {
               if (t.material.isRayTracingMaterial) return;
               t.material.isMeshStandardMaterial
-                ? (t.material = new RayTracingMaterial().fromStandardMaterial(
-                    t.material
-                  ))
-                : (t.material = new RayTracingMaterial());
+                ? (t.material =
+                    new THREE.RayTracingMaterial().fromStandardMaterial(
+                      t.material
+                    ))
+                : (t.material = new THREE.RayTracingMaterial());
             }
           });
 
         scene.add(gltfInfo.scene);
         const radius = 2;
-        const sphereAreaLight = new SphereAreaLight(0xffffff, 100, radius);
+        const sphereAreaLight = new THREE.SphereAreaLight(
+          0xffffff,
+          100,
+          radius
+        );
         sphereAreaLight.position.set(0, 5, 0);
         scene.add(sphereAreaLight);
         sphereAreaLight.visible = false;
         const width = 10;
         const height = 10;
-        const rectAreaLight = new RectAreaLight(0xffffff, 100, width, height);
+        const rectAreaLight = new THREE.RectAreaLight(
+          0xffffff,
+          100,
+          width,
+          height
+        );
         rectAreaLight.position.set(10, 12, 0);
         rectAreaLight.target.set(0, 4, 0);
         scene.add(rectAreaLight);
         rectAreaLight.visible = false;
-        const quad = new QuadLight();
+        const quad = new THREE.QuadLight();
         quad.color = new THREE.Color("white");
         quad.v1 = new THREE.Vector3(1, 1, 1);
         quad.v2 = new THREE.Vector3(7, 1, 1);
@@ -562,7 +576,7 @@
 
         scene.add(quad);
 
-        const pointLight = new PointLight(0xffffff, 1);
+        const pointLight = new THREE.PointLight(0xffffff, 1);
         pointLight.position.set(2, 5, 0);
         scene.add(pointLight);
 

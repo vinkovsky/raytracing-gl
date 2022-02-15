@@ -1,4 +1,4 @@
-import { Light, Vector3 } from "../modules/three.js";
+import { Light, Vector3 } from "three";
 
 export class DirectionalLight extends Light {
   constructor(color, intensity) {

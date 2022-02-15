@@ -2,8 +2,9 @@
 // Uses the surface area heuristic (SAH) algorithm for efficient partitioning
 // http://www.pbr-book.org/3ed-2018/Primitives_and_Intersection_Acceleration/Bounding_Volume_Hierarchies.html
 
-import { Vector3, Box3 } from "../../modules/three.js";
-import { partition, nthElement } from "./bvhUtil.js";
+import { Vector3, Box3 } from "three";
+
+import { partition, nthElement } from "./bvhUtil";
 
 const size = new Vector3();
 

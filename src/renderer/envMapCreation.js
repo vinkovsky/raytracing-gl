@@ -1,8 +1,9 @@
 // Convert image data from the RGBE format to a 32-bit floating point format
 // See https://www.cg.tuwien.ac.at/research/theses/matkovic/node84.html for a description of the RGBE format
 
-import * as THREE from "../../modules/three.js";
-import { rgbeToFloat } from "./rgbeToFloat.js";
+import * as THREE from "three";
+
+import { rgbeToFloat } from "./rgbeToFloat";
 
 // Tools for generating and modify env maps for lighting from scene component data
 

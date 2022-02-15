@@ -1,5 +1,6 @@
-import { Vector3, PlaneGeometry } from "../../modules/three.js";
-import { RayTracingMaterial } from "../RayTracingMaterial.js";
+import { Vector3, PlaneGeometry } from "three";
+
+import { RayTracingMaterial } from "../RayTracingMaterial";
 
 export function decomposeScene(scene, camera) {
   const meshes = [];

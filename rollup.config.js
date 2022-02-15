@@ -35,8 +35,16 @@ const getBabelOptions = ({ useESModules }) => ({
 
 export default [
   {
-    input: `./src/main.js`,
-    output: { file: `build/rt-renderer.js`, format: "esm" },
+    input: "./src/main.js",
+    output: {
+      file: "build/rt-renderer.js",
+      name: "rt-renderer",
+      globals: {
+        three: "THREE",
+      },
+
+      format: "umd",
+    },
     external,
     plugins: [
       babel(getBabelOptions({ useESModules: true })),

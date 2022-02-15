@@ -4,7 +4,7 @@ import { makeRenderPass } from "./RenderPass";
 import { makeFramebuffer } from "./FrameBuffer";
 import { makeTexture } from "./Texture";
 
-import { fragment } from "./glsl/toneMap";
+import fragment from "./glsl/toneMap.frag";
 
 const toneMapFunctions = {
   [THREE.LinearToneMapping]: 0,

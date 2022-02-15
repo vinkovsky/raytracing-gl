@@ -2,7 +2,7 @@ import { makeRenderPass } from "./RenderPass";
 import { makeFramebuffer } from "./FrameBuffer";
 import { makeTexture } from "./Texture";
 
-import { fragment } from "./glsl/svgf";
+import fragment from "./glsl/svgf.frag";
 
 export function makeSVGFPass(gl, params) {
   const { fullscreenQuad } = params;

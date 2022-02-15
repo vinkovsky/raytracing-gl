@@ -1,4 +1,4 @@
-export const fragment = {
+export default {
   source: `
         vec4 LGL_An(sampler2D map, vec2 uv) {
         #ifdef OES_texture_float_linear
@@ -113,5 +113,5 @@ export const fragment = {
             out_light = accumulatedLight;
             out_momentLengthVariance = vec4(luminance, luminance * luminance, 1., 100.);
         }
-    `,
+    `
 };

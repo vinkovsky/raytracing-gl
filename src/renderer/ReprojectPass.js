@@ -2,7 +2,7 @@ import { Matrix4 } from "three";
 
 import { makeRenderPass } from "./RenderPass";
 
-import { fragment } from "./glsl/reproject";
+import fragment from "./glsl/reproject.frag";
 
 export function makeReprojectPass(e, params) {
   const { fullscreenQuad, maxReprojectedSamples } = params;

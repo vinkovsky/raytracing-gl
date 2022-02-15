@@ -1,4 +1,4 @@
-export const fragment = {
+export default {
   source: `
         layout(location = 0) out vec4 out_color;
         uniform sampler2D inputBuffer;
@@ -780,5 +780,5 @@ export const fragment = {
             out_color = FxaaPixelShader(vCoord, vec4(0.0), inputBuffer, inputBuffer, inputBuffer, resolution, vec4(0.0), vec4(0.0), vec4(0.0), 0.75, 0.166, 0.0833, 0.0, 0.0, 0.0, vec4(0.0));
             out_color.a = texture(inputBuffer, vCoord).a;
         }
-    `,
+    `
 };

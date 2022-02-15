@@ -1,6 +1,6 @@
 import { makeRenderPass } from "./RenderPass";
 
-import { fragment } from "./glsl/fxaa";
+import fragment from "./glsl/fxaa.frag";
 
 export function makeFXAAPass(gl, params) {
   const { fullscreenQuad } = params;

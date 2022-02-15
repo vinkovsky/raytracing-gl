@@ -7,7 +7,7 @@ import {
   mergeTexturesFromMaterials,
 } from "./texturesFromMaterials";
 
-import materialBufferChunk from "./glsl/chunks/materialBuffer";
+import materialBufferChunk from "./glsl/chunks/materialBuffer.glsl";
 
 export function makeMaterialBuffer(gl, materials) {
   const maps = getTexturesFromMaterials(materials, [

@@ -1,4 +1,4 @@
-export const fragment = {
+export default {
   source: `
           vec4 LGL_An(sampler2D map, vec2 uv) {
           #ifdef OES_texture_float_linear
@@ -56,5 +56,5 @@ export const fragment = {
                   out_color = vec4(light, 1.0);
               }
           }
-    `,
+    `
 };

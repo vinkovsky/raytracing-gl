@@ -1,4 +1,4 @@
-export const fragment = {
+export default {
   source: (e) => `
       #define PI 3.14159265359
       #define TWOPI 6.28318530718

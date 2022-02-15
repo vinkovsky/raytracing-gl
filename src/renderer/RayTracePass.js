@@ -6,7 +6,7 @@ import { makeStratifiedSamplerCombined } from "./StratifiedSamplerCombined";
 import { makeTexture } from "./Texture";
 import { clamp } from "./util";
 
-import { fragment } from "./glsl/rayTrace";
+import fragment from "./glsl/rayTrace.frag";
 
 export async function makeRayTracePass(
   gl,

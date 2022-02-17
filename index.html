@@ -547,14 +547,17 @@
           });
 
         scene.add(gltfInfo.scene);
+
         const radius = 2;
         const sphereAreaLight = new THREE.SphereAreaLight(
           0xffffff,
           100,
           radius
         );
+
         sphereAreaLight.position.set(0, 5, 0);
         scene.add(sphereAreaLight);
+
         sphereAreaLight.visible = false;
         const width = 10;
         const height = 10;
@@ -568,6 +571,7 @@
         rectAreaLight.target.set(0, 4, 0);
         scene.add(rectAreaLight);
         rectAreaLight.visible = false;
+
         const quad = new THREE.QuadLight();
         quad.color = new THREE.Color("white");
         quad.v1 = new THREE.Vector3(1, 1, 1);

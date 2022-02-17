@@ -1,27 +1,27 @@
 import { unrollLoop } from '../glslUtil';
 
+import constants from './chunks/constants.glsl';
+
 export default {
+  includes: [constants],
   source: (e) => `
-      #define PI 3.14159265359
-      #define TWOPI 6.28318530718
-      #define INVPI 0.31830988618
-      #define INVPI2 0.10132118364
-      #define EPS 0.0001
-      #define ONE_MINUS_EPS 0.999999
-      #define INF 1000000.0
-      #define ROUGHNESS_MIN 0.001
-      #define DISNEY 0
+ 
+
       const vec3 luminance = vec3(0.2126, 0.7152, 0.0722);
+
       float LGL_AV(vec3 color) {
           return dot(color, luminance);
       }
+
       #define RAY_MAX_DISTANCE 9999.0
+
       struct Ray {
           vec3 o;
           vec3 d;
           vec3 LGL_BN;
           float LGL_BO;
       };
+
       struct Path {
           Ray ray;
           vec3 li;
@@ -31,6 +31,7 @@ export default {
           float LGL_BR;
           vec3 LGL_BS;
       };
+
       struct Camera {
           mat4 transform;
           float aspect;
@@ -38,25 +39,28 @@ export default {
           float focus;
           float aperture;
       };
+
       #if defined(NUM_LIGHTS)
-      struct Lights {
-          vec3 position[NUM_LIGHTS];
-          vec3 emission[NUM_LIGHTS];
-          vec3 p1[NUM_LIGHTS];
-          vec3 p2[NUM_LIGHTS];
-          vec4 params[NUM_LIGHTS];
-      };
-      struct Light {
-          vec3 position;
-          vec3 emission;
-          vec3 p1;
-          vec3 p2;
-          float radius;
-          float area;
-          float type;
-          float visible;
-      };
+        struct Lights {
+            vec3 position[NUM_LIGHTS];
+            vec3 emission[NUM_LIGHTS];
+            vec3 p1[NUM_LIGHTS];
+            vec3 p2[NUM_LIGHTS];
+            vec4 params[NUM_LIGHTS];
+        };
+
+        struct Light {
+            vec3 position;
+            vec3 emission;
+            vec3 p1;
+            vec3 p2;
+            float radius;
+            float area;
+            float type;
+            float visible;
+        };
       #endif
+
       struct SurfaceInteraction {
           bool LGL_BK;
           bool LGL_BI;
@@ -88,11 +92,13 @@ export default {
           vec3 specularColor;
           float LGL_BG;
       };
+
       struct BsdfSampleRec {
           vec3 L;
           vec3 f;
           float pdf;
       };
+
       struct LightSampleRec {
           vec3 normal;
           vec3 emission;
@@ -100,38 +106,46 @@ export default {
           float dist;
           float pdf;
       };
-      void LGL_AW(inout Ray ray, vec3 origin, vec3 direction) {
+
+      void initRay(inout Ray ray, vec3 origin, vec3 direction) {
           ray.o = origin;
           ray.d = direction;
           ray.LGL_BN = 1.0 / ray.d;
           ray.LGL_BO = RAY_MAX_DISTANCE;
       }
-      void LGL_AW(inout Ray ray, vec3 origin, vec3 direction, float rMax) {
+
+      void initRay(inout Ray ray, vec3 origin, vec3 direction, float rMax) {
           ray.o = origin;
           ray.d = direction;
           ray.LGL_BN = 1.0 / ray.d;
           ray.LGL_BO = rMax;
       }
-      ivec2 LGL_AX(int i, int LGL_BT) {
+
+      ivec2 unpackTexel(int i, int LGL_BT) {
           ivec2 u;
           u.y = i >> LGL_BT;
           u.x = i - (u.y << LGL_BT);
           return u;
       }
-      vec4 LGL_AY(sampler2D s, int i, int LGL_BT) {
-          return texelFetch(s, LGL_AX(i, LGL_BT), 0);
+
+      vec4 fetchData(sampler2D s, int i, int LGL_BT) {
+          return texelFetch(s, unpackTexel(i, LGL_BT), 0);
       }
-      ivec4 LGL_AY(isampler2D s, int i, int LGL_BT) {
-          return texelFetch(s, LGL_AX(i, LGL_BT), 0);
+
+      ivec4 fetchData(isampler2D s, int i, int LGL_BT) {
+          return texelFetch(s, unpackTexel(i, LGL_BT), 0);
       }
+
       uniform Camera camera;
       uniform vec2 pixelSize;
       uniform vec2 jitter;
       uniform float frameCount;
       in vec2 vCoord;
+
       #if defined(NUM_LIGHTS)
-      uniform Lights lights;
+        uniform Lights lights;
       #endif
+
       uniform int bounces;
       uniform vec3 backgroundColor;
       uniform float envMapIntensity;
@@ -140,15 +154,19 @@ export default {
       uniform float stratifiedSamples[71];
       uniform float strataSize;
       float pixelSeed;
+
       float LGL_AN(vec2 p) {
           return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
       }
+
       uvec4 seed;
       ivec2 pixel;
+
       void LGL_AO(float frame) {
           pixel = ivec2(vCoord / pixelSize);
           seed = uvec4(pixel, int(frame), pixel.x + pixel.y);
       }
+
       void LGL_AP(inout uvec4 v) {
           v = v * 1664525u + 1013904223u;
           v.x += v.y * v.w;
@@ -161,34 +179,42 @@ export default {
           v.z += v.x * v.y;
           v.w += v.y * v.z;
       }
+
       float LGL_AQ() {
           LGL_AP(seed);
           return float(seed.x) / float(0xffffffffu);
       }
+
       vec2 LGL_AQ2() {
           LGL_AP(seed);
           return vec2(seed.xy) / float(0xffffffffu);
       }
+
       void LGL_AS(float frame) {
           vec2 noiseSize = vec2(textureSize(noiseTex, 0));
           pixelSeed = texture(noiseTex, vCoord / (pixelSize * noiseSize)).r;
           LGL_AO(frame);
       }
+
       int sampleIndex = 0;
+
       float LGL_AQomSample() {
           float stratifiedSample = stratifiedSamples[sampleIndex++];
           float LGL_AQom = fract((stratifiedSample + pixelSeed) * strataSize);
           return EPS + (1.0 - 2.0 * EPS) * LGL_AQom;
       }
+
       vec2 LGL_AQomSampleVec2() {
           return vec2(LGL_AQomSample(), LGL_AQomSample());
       }
+
       struct MaterialSamples {
           vec2 s1;
           vec2 s2;
           vec2 s3;
           vec2 s4;
       };
+
       MaterialSamples getRandomMaterialSamples() {
           MaterialSamples samples;
           samples.s1 = LGL_AQomSampleVec2();
@@ -197,21 +223,22 @@ export default {
           samples.s4 = LGL_AQomSampleVec2();
           return samples;
       }
+
       vec4 LGL_An(sampler2D map, vec2 uv) {
-      #ifdef OES_texture_float_linear
-          return texture(map, uv);
-      #else
-          vec2 size = vec2(textureSize(map, 0));
-          vec2 texelSize = 1.0 / size;
-          uv = uv * size - 0.5;
-          vec2 f = fract(uv);
-          uv = floor(uv) + 0.5;
-          vec4 s1 = texture(map, (uv + vec2(0, 0)) * texelSize);
-          vec4 s2 = texture(map, (uv + vec2(1, 0)) * texelSize);
-          vec4 s3 = texture(map, (uv + vec2(0, 1)) * texelSize);
-          vec4 s4 = texture(map, (uv + vec2(1, 1)) * texelSize);
-          return mix(mix(s1, s2, f.x), mix(s3, s4, f.x), f.y);
-      #endif
+        #ifdef OES_texture_float_linear
+            return texture(map, uv);
+        #else
+            vec2 size = vec2(textureSize(map, 0));
+            vec2 texelSize = 1.0 / size;
+            uv = uv * size - 0.5;
+            vec2 f = fract(uv);
+            uv = floor(uv) + 0.5;
+            vec4 s1 = texture(map, (uv + vec2(0, 0)) * texelSize);
+            vec4 s2 = texture(map, (uv + vec2(1, 0)) * texelSize);
+            vec4 s3 = texture(map, (uv + vec2(0, 1)) * texelSize);
+            vec4 s4 = texture(map, (uv + vec2(1, 1)) * texelSize);
+            return mix(mix(s1, s2, f.x), mix(s3, s4, f.x), f.y);
+        #endif
       }
       uniform Materials {
           vec4 colorAndMaterialType[NUM_MATERIALS];
@@ -489,9 +516,9 @@ export default {
           si.LGL_BK = true;
           si.LGL_BM = LGL_BM;
           si.position = barycentric.x * tri.p0 + barycentric.y * tri.p1 + barycentric.z * tri.p2;
-          ivec2 i0 = LGL_AX(index.x, VERTEX_COLUMNS);
-          ivec2 i1 = LGL_AX(index.y, VERTEX_COLUMNS);
-          ivec2 i2 = LGL_AX(index.z, VERTEX_COLUMNS);
+          ivec2 i0 = unpackTexel(index.x, VERTEX_COLUMNS);
+          ivec2 i1 = unpackTexel(index.y, VERTEX_COLUMNS);
+          ivec2 i2 = unpackTexel(index.z, VERTEX_COLUMNS);
           vec3 n0 = texelFetch(normalBuffer, i0, 0).xyz;
           vec3 n1 = texelFetch(normalBuffer, i1, 0).xyz;
           vec3 n2 = texelFetch(normalBuffer, i2, 0).xyz;
@@ -599,8 +626,8 @@ export default {
           int stack = 0;
           while(stack >= 0) {
               int i = nodesToVisit[stack--];
-              vec4 r1 = LGL_AY(bvhBuffer, i, BVH_COLUMNS);
-              vec4 r2 = LGL_AY(bvhBuffer, i + 1, BVH_COLUMNS);
+              vec4 r1 = fetchData(bvhBuffer, i, BVH_COLUMNS);
+              vec4 r2 = fetchData(bvhBuffer, i + 1, BVH_COLUMNS);
               int splitAxisOrNumPrimitives = floatBitsToInt(r1.w);
               if(splitAxisOrNumPrimitives >= 0) {
                   int splitAxis = splitAxisOrNumPrimitives;
@@ -616,7 +643,7 @@ export default {
                   }
               } else {
                   ivec3 index = floatBitsToInt(r1.xyz);
-                  Triangle tri = Triangle(LGL_AY(positionBuffer, index.x, VERTEX_COLUMNS).xyz, LGL_AY(positionBuffer, index.y, VERTEX_COLUMNS).xyz, LGL_AY(positionBuffer, index.z, VERTEX_COLUMNS).xyz);
+                  Triangle tri = Triangle(fetchData(positionBuffer, index.x, VERTEX_COLUMNS).xyz, fetchData(positionBuffer, index.y, VERTEX_COLUMNS).xyz, fetchData(positionBuffer, index.z, VERTEX_COLUMNS).xyz);
                   TriangleIntersect LGL_BK = LGL_k(ray, tri);
                   if(LGL_BK.t > 0.0 && LGL_BK.t < maxDist) {
                       return true;
@@ -684,8 +711,8 @@ export default {
           int stack = 0;
           while(stack >= 0) {
               int i = nodesToVisit[stack--];
-              vec4 r1 = LGL_AY(bvhBuffer, i, BVH_COLUMNS);
-              vec4 r2 = LGL_AY(bvhBuffer, i + 1, BVH_COLUMNS);
+              vec4 r1 = fetchData(bvhBuffer, i, BVH_COLUMNS);
+              vec4 r2 = fetchData(bvhBuffer, i + 1, BVH_COLUMNS);
               int splitAxisOrNumPrimitives = floatBitsToInt(r1.w);
               if(splitAxisOrNumPrimitives >= 0) {
                   int splitAxis = splitAxisOrNumPrimitives;
@@ -701,7 +728,7 @@ export default {
                   }
               } else {
                   ivec3 index = floatBitsToInt(r1.xyz);
-                  Triangle tri = Triangle(LGL_AY(positionBuffer, index.x, VERTEX_COLUMNS).xyz, LGL_AY(positionBuffer, index.y, VERTEX_COLUMNS).xyz, LGL_AY(positionBuffer, index.z, VERTEX_COLUMNS).xyz);
+                  Triangle tri = Triangle(fetchData(positionBuffer, index.x, VERTEX_COLUMNS).xyz, fetchData(positionBuffer, index.y, VERTEX_COLUMNS).xyz, fetchData(positionBuffer, index.z, VERTEX_COLUMNS).xyz);
                   TriangleIntersect LGL_BK = LGL_k(ray, tri);
                   if(LGL_BK.t > 0.0) {
                       int materialIndex = floatBitsToInt(r2.w);
@@ -721,7 +748,7 @@ export default {
           if(si.LGL_BK && !si.LGL_BI && si.LGL_BD < 1.0) {
               float LGL_BJ = LGL_AQ();
               while(si.LGL_BK && !si.LGL_BI && LGL_BJ > si.LGL_BD) {
-                  LGL_AW(ray, si.position + EPS * ray.d, ray.d);
+                  initRay(ray, si.position + EPS * ray.d, ray.d);
                   LGL_n(ray, si, lightSampleRec, depth);
               }
           }
@@ -1192,7 +1219,7 @@ export default {
           bool brdfSample = false;
       #ifndef CONST_COLOR_ENV
           lightDir = LGL_d(envDirSample, uv, lightPdf);
-          LGL_AW(path.ray, surfacePos, lightDir);
+          initRay(path.ray, surfacePos, lightDir);
           if(!LGL_m(path.ray, INF - EPS)) {
               vec3 irr = LGL_An(envMap, uv).rgb * envMapIntensity;
               bsdfSampleRec.f = LGL_X(si, viewDir, lightDir, bsdfSampleRec.pdf);
@@ -1220,7 +1247,7 @@ export default {
           light = Light(position, emission, p1, p2, radius, area, type, visible);
           LGL_Al(light, surfacePos, lightSampleRec, lightDirSample);
           if(dot(lightSampleRec.direction, lightSampleRec.normal) < 0.0) {
-              LGL_AW(path.ray, surfacePos, lightSampleRec.direction);
+              initRay(path.ray, surfacePos, lightSampleRec.direction);
               if(!LGL_m(path.ray, lightSampleRec.dist - EPS)) {
                   bsdfSampleRec.f = LGL_X(si, viewDir, lightSampleRec.direction, bsdfSampleRec.pdf);
                   float LGL_BR = 1.0;
@@ -1270,7 +1297,7 @@ export default {
           path.li += path.beta * si.emissive;
           path.beta *= exp(-path.LGL_BS * si.t);
           MaterialSamples LGL_AQomSamples = getRandomMaterialSamples();
-          if(si.LGL_BH == DISNEY) {
+          if(si.LGL_BH == RAYTRACEMTL) {
               path.li += LGL_e(si, path, LGL_AQomSamples.s1, LGL_AQomSamples.s2) * path.beta;
           }
           bsdfSampleRec.f = LGL_W(si, -path.ray.d, si.LGL_BL, bsdfSampleRec.L, bsdfSampleRec.pdf, LGL_AQomSamples);
@@ -1291,8 +1318,9 @@ export default {
               }
               path.beta /= 1.0 - q;
           }
-          LGL_AW(path.ray, si.position + EPS * bsdfSampleRec.L, bsdfSampleRec.L);
+          initRay(path.ray, si.position + EPS * bsdfSampleRec.L, bsdfSampleRec.L);
       }
+
       vec4 LGL_Ao(inout Ray ray) {
           SurfaceInteraction si;
           Path path;
@@ -1305,16 +1333,20 @@ export default {
           path.LGL_BR = 1.0;
           path.LGL_BS = vec3(0.0);
           path.beta = vec3(1.0);
-          for(int i = 0; i < bounces; i++) {
-              if(path.LGL_BQ) {
+
+          for (int i = 0; i < bounces; i++) {
+              if (path.LGL_BQ) {
                   return vec4(path.li, path.alpha);
               }
+
               LGL_n(path.ray, si, lightSampleRec, i);
               LGL_o(path.ray, si, lightSampleRec, i);
               bounce(path, i, si, bsdfSampleRec, lightSampleRec);
           }
+
           return vec4(path.li, path.alpha);
       }
+
       void main() {
           LGL_AS(frameCount);
           vec2 vCoordAntiAlias = vCoord + jitter;
@@ -1331,11 +1363,13 @@ export default {
           direction = mat3(camera.transform) * direction;
       #endif
           Ray cam;
-          LGL_AW(cam, origin, direction);
+          initRay(cam, origin, direction);
           vec4 liAndAlpha = LGL_Ao(cam);
-          if(!(liAndAlpha.x < INF && liAndAlpha.x > -EPS)) {
+
+          if (!(liAndAlpha.x < INF && liAndAlpha.x > -EPS)) {
               liAndAlpha = vec4(0, 0, 0, 1);
           }
+
           out_light = liAndAlpha;
       }`,
 };

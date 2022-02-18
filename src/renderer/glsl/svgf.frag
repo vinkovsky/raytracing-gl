@@ -22,15 +22,15 @@ export default {
         uniform float useMomentVariance;
         uniform float demodulateAlbedo;
 
-        // float LGL_Ap(float v) {
+        // float calcTheta(float v) {
         //     return acos(min(max(v, 0.0), 1.0));
         // }
 
-        float LGL_Aq(vec2 uv) {
+        float getAlpha(vec2 uv) {
             return max(texture(dataTex, uv).a, 0.);
         }
 
-        vec4 LGL_Ar() {
+        vec4 getUpscaledLight() {
             vec4 upscaledLight = texture(lightTex, vCoord);
 
             float sampleFrame = upscaledLight.a;
@@ -80,14 +80,14 @@ export default {
                         continue;
                     }
                    
-                    varSum += kernel[i] * LGL_Aq(uv);
+                    varSum += kernel[i] * getAlpha(uv);
                     varSumWeight += kernel[i];
                 }
 
                 if (varSumWeight > 0.0) {
                     var = max(varSum / varSumWeight, 0.0);
                 } else {
-                    var = max(LGL_Aq(vCoord), 0.0);
+                    var = max(getAlpha(vCoord), 0.0);
                 }
             }
 
@@ -114,29 +114,29 @@ export default {
                 // in addition, alpha contains a scale factor for the shadow catcher material
                 // dividing by alpha normalizes the brightness of the shadow catcher to match the background env map.   
                 vec3 kernelColor = upscaledLight.rgb / upscaledLight.a;
-                float Dc = distance(color, kernelColor);
-                float Wc;
+                float distanceColor = distance(color, kernelColor);
+                float weightColor;
 
                 if (useMomentVariance > 0.) {
-                    Wc = min(exp(-Dc / ((1. + sqrt(var)) * colorFactor + 1e-6)), 1.0);
+                    weightColor = min(exp(-distanceColor / ((1. + sqrt(var)) * colorFactor + 1e-6)), 1.0);
                 } else {
-                    Wc = min(exp(-Dc / (colorFactor + 1e-6)), 1.0);
+                    weightColor = min(exp(-distanceColor / (colorFactor + 1e-6)), 1.0);
                 }
 
                 vec3 kernelNormal = texture(gNormal, uv).rgb;
-                float Dn = dot(normal, kernelNormal);
-                Dn = Dn / float(stepwidth * stepwidth + 1e-6);
+                float dotNormal = dot(normal, kernelNormal);
+                dotNormal = dotNormal / float(stepwidth * stepwidth + 1e-6);
                 
-                if (Dn < 1e-3) {
+                if (dotNormal < 1e-3) {
                     continue;
                 }
                 
-                float Wn = Dn;
+                float weightNormal = dotNormal;
                 vec3 kernelPosition = positionAndMeshIndex.rgb;
                 
-                float Dp = distance(position, kernelPosition);
-                float Wp = min(exp(-Dp / (positionFactor + 1e-6)), 1.0);
-                float weight = Wc * Wn * Wp * kernel[i];
+                float distancePosition = distance(position, kernelPosition);
+                float weightPosition = min(exp(-distancePosition / (positionFactor + 1e-6)), 1.0);
+                float weight = weightColor * weightNormal * weightPosition * kernel[i];
                 
                 weightSum += weight;
                 colorSum += kernelColor * weight;
@@ -148,7 +148,7 @@ export default {
         }
 
         void main() {
-            vec4 light = LGL_Ar();
+            vec4 light = getUpscaledLight();
             out_color = light;
         }
     `

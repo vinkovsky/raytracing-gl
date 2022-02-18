@@ -73,6 +73,7 @@ export default {
                     float isValid = getValidMesh(histMeshId, currentMeshId, texel[i], hSize);
                    
                     float weight = isValid * weights[i];
+                    
                     historyLight += weight * texelFetch(previousLightTex, texel[i], 0);
                     historyMoment += weight * texelFetch(previousMomentLengthVarianceTex, texel[i], 0).rg;
                     sum += weight;
@@ -108,11 +109,15 @@ export default {
                     float moment_alpha_min = momentBlendFactor;
                     float color_alpha = max(1.0 / historyLength, color_alpha_min);
                     float moment_alpha = max(1.0 / historyLength, moment_alpha_min);
+                   
                     out_light = color_alpha * accumulatedLight + historyLight * (1. - color_alpha);
+                   
                     float first_moment = moment_alpha * historyMoment.x + (1.0 - moment_alpha) * luminance;
                     float second_moment = moment_alpha * historyMoment.y + (1.0 - moment_alpha) * luminance * luminance;
                     float variance = second_moment - first_moment * first_moment;
+                   
                     out_momentLengthVariance = vec4(first_moment, second_moment, historyLength, variance);
+                   
                     return;
                 }
             }

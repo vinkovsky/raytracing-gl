@@ -18,8 +18,8 @@ export default {
       struct Ray {
           vec3 o;
           vec3 d;
-          vec3 LGL_BN;
-          float LGL_BO;
+          vec3 invD;
+          float tMax;
       };
 
       struct Path {
@@ -62,12 +62,12 @@ export default {
       #endif
 
       struct SurfaceInteraction {
-          bool LGL_BK;
+          bool hit;
           bool LGL_BI;
           float t;
           vec3 position;
           vec3 normal;
-          vec3 LGL_BM;
+          vec3 faceNormal;
           vec3 LGL_BL;
           vec3 tangent;
           vec3 bitangent;
@@ -110,15 +110,15 @@ export default {
       void initRay(inout Ray ray, vec3 origin, vec3 direction) {
           ray.o = origin;
           ray.d = direction;
-          ray.LGL_BN = 1.0 / ray.d;
-          ray.LGL_BO = RAY_MAX_DISTANCE;
+          ray.invD = 1.0 / ray.d;
+          ray.tMax = RAY_MAX_DISTANCE;
       }
 
       void initRay(inout Ray ray, vec3 origin, vec3 direction, float rMax) {
           ray.o = origin;
           ray.d = direction;
-          ray.LGL_BN = 1.0 / ray.d;
-          ray.LGL_BO = rMax;
+          ray.invD = 1.0 / ray.d;
+          ray.tMax = rMax;
       }
 
       ivec2 unpackTexel(int i, int LGL_BT) {
@@ -512,9 +512,9 @@ export default {
       float LGL_gClassic(vec3 v1, vec3 v2, vec3 v3, vec3 v4, Ray r, bool isDoubleSided) {
           return min(LGL_h(v1, v3, v2, r, isDoubleSided), LGL_h(v2, v3, v4, r, isDoubleSided));
       }
-      void LGL_j(inout SurfaceInteraction si, Triangle tri, vec3 barycentric, ivec3 index, vec3 LGL_BM, int materialIndex) {
-          si.LGL_BK = true;
-          si.LGL_BM = LGL_BM;
+      void surfaceInteractionFromBVH(inout SurfaceInteraction si, Triangle tri, vec3 barycentric, ivec3 index, vec3 faceNormal, int materialIndex) {
+          si.hit = true;
+          si.faceNormal = faceNormal;
           si.position = barycentric.x * tri.p0 + barycentric.y * tri.p1 + barycentric.z * tri.p2;
           ivec2 i0 = unpackTexel(index.x, VERTEX_COLUMNS);
           ivec2 i1 = unpackTexel(index.y, VERTEX_COLUMNS);
@@ -573,7 +573,7 @@ export default {
           uvt.z = dot(e1, qv);
           uvt.xyz = uvt.xyz / det;
           uvt.w = 1.0 - uvt.x - uvt.y;
-          if(uvt.z >= r.LGL_BO) {
+          if(uvt.z >= r.tMax) {
               return ti;
           }
           if(all(greaterThanEqual(uvt, vec4(0.0))) && uvt.z < INF) {
@@ -583,13 +583,13 @@ export default {
           return ti;
       }
       float LGL_l(Ray r, Box b) {
-          vec3 tBot = (b.min - r.o) * r.LGL_BN;
-          vec3 tTop = (b.max - r.o) * r.LGL_BN;
+          vec3 tBot = (b.min - r.o) * r.invD;
+          vec3 tTop = (b.max - r.o) * r.invD;
           vec3 tNear = min(tBot, tTop);
           vec3 tFar = max(tBot, tTop);
           float t0 = max(tNear.x, max(tNear.y, tNear.z));
           float t1 = min(tFar.x, min(tFar.y, tFar.z));
-          return (t0 > t1 || t0 > r.LGL_BO) ? -1.0 : (t0 > 0.0 ? t0 : t1);
+          return (t0 > t1 || t0 > r.tMax) ? -1.0 : (t0 > 0.0 ? t0 : t1);
       }
       bool LGL_m(inout Ray ray, float maxDist) {
       #if defined(NUM_LIGHTS)
@@ -644,8 +644,8 @@ export default {
               } else {
                   ivec3 index = floatBitsToInt(r1.xyz);
                   Triangle tri = Triangle(fetchData(positionBuffer, index.x, VERTEX_COLUMNS).xyz, fetchData(positionBuffer, index.y, VERTEX_COLUMNS).xyz, fetchData(positionBuffer, index.z, VERTEX_COLUMNS).xyz);
-                  TriangleIntersect LGL_BK = LGL_k(ray, tri);
-                  if(LGL_BK.t > 0.0 && LGL_BK.t < maxDist) {
+                  TriangleIntersect hit = LGL_k(ray, tri);
+                  if(hit.t > 0.0 && hit.t < maxDist) {
                       return true;
                   }
               }
@@ -653,26 +653,24 @@ export default {
           return false;
       }
       void LGL_n(inout Ray ray, inout SurfaceInteraction si, inout LightSampleRec lightSampleRec, int bounce) {
-          si.LGL_BK = false;
+          si.hit = false;
           float t = INF;
           float d;
       #if defined(NUM_LIGHTS)
-          for(int i = 0; i < NUM_LIGHTS; i++) {
+          for (int i = 0; i < NUM_LIGHTS; i++) {
               vec4 params = lights.params[i];
               float radius = params.x;
               float area = params.y;
               float type = params.z;
               float visible = params.w;
-              if(bounce == 0 && visible < 0.1)
-                  continue;
+              if (bounce == 0 && visible < 0.1) continue;
               vec3 position = lights.position[i];
               vec3 emission = lights.emission[i];
               vec3 p1 = lights.p1[i];
               vec3 p2 = lights.p2[i];
-              if(type == 0. || type == 1.) {
+              if (type == 0. || type == 1.) {
                   vec3 normal = normalize(cross(p1, p2));
-                  if(dot(normal, ray.d) > 0.)
-                      continue;
+                  if (dot(normal, ray.d) > 0.) continue;
                   vec4 plane = vec4(normal, dot(normal, position));
                   p1 *= 1.0 / dot(p1, p1);
                   p2 *= 1.0 / dot(p2, p2);
@@ -685,9 +683,9 @@ export default {
                       float pdf = (t * t) / (area * cosTheta);
                       lightSampleRec.emission = emission;
                       lightSampleRec.pdf = pdf;
-                      si.LGL_BK = true;
+                      si.hit = true;
                       si.LGL_BI = true;
-                      ray.LGL_BO = t;
+                      ray.tMax = t;
                   }
               }
               if(type == 2.) {
@@ -699,9 +697,9 @@ export default {
                       float pdf = (t * t) / area;
                       lightSampleRec.emission = emission;
                       lightSampleRec.pdf = pdf;
-                      si.LGL_BK = true;
+                      si.hit = true;
                       si.LGL_BI = true;
-                      ray.LGL_BO = t;
+                      ray.tMax = t;
                   }
               }
           }
@@ -729,15 +727,15 @@ export default {
               } else {
                   ivec3 index = floatBitsToInt(r1.xyz);
                   Triangle tri = Triangle(fetchData(positionBuffer, index.x, VERTEX_COLUMNS).xyz, fetchData(positionBuffer, index.y, VERTEX_COLUMNS).xyz, fetchData(positionBuffer, index.z, VERTEX_COLUMNS).xyz);
-                  TriangleIntersect LGL_BK = LGL_k(ray, tri);
-                  if(LGL_BK.t > 0.0) {
+                  TriangleIntersect hit = LGL_k(ray, tri);
+                  if(hit.t > 0.0) {
                       int materialIndex = floatBitsToInt(r2.w);
-                      vec3 LGL_BM = r2.xyz;
-                      si.t = LGL_BK.t;
+                      vec3 faceNormal = r2.xyz;
+                      si.t = hit.t;
                       si.LGL_BI = false;
-                      ray.LGL_BO = LGL_BK.t;
-                      LGL_j(si, tri, LGL_BK.barycentric, index, LGL_BM, materialIndex);
-                      si.LGL_BL = dot(si.LGL_BM, ray.d) <= 0.0 ? si.normal : -si.normal;
+                      ray.tMax = hit.t;
+                      surfaceInteractionFromBVH(si, tri, hit.barycentric, index, faceNormal, materialIndex);
+                      si.LGL_BL = dot(si.faceNormal, ray.d) <= 0.0 ? si.normal : -si.normal;
                   }
               }
           }
@@ -745,9 +743,9 @@ export default {
           si.metalness = clamp(si.metalness, 0.0, 1.0);
       }
       void LGL_o(inout Ray ray, inout SurfaceInteraction si, inout LightSampleRec lightSampleRec, int depth) {
-          if(si.LGL_BK && !si.LGL_BI && si.LGL_BD < 1.0) {
+          if(si.hit && !si.LGL_BI && si.LGL_BD < 1.0) {
               float LGL_BJ = LGL_AQ();
-              while(si.LGL_BK && !si.LGL_BI && LGL_BJ > si.LGL_BD) {
+              while(si.hit && !si.LGL_BI && LGL_BJ > si.LGL_BD) {
                   initRay(ray, si.position + EPS * ray.d, ray.d);
                   LGL_n(ray, si, lightSampleRec, depth);
               }
@@ -870,17 +868,17 @@ export default {
           float phi = TWOPI * r2;
           return vec3(r * cos(phi), r * sin(phi), z);
       }
-      vec3 LGL_Ad(vec3 LGL_BM, vec3 viewDir, mat3 basis, float roughness, vec2 LGL_AQom) {
+      vec3 LGL_Ad(vec3 faceNormal, vec3 viewDir, mat3 basis, float roughness, vec2 LGL_AQom) {
           float phi = TWOPI * LGL_AQom.y;
           float alpha = roughness * roughness;
           float cosTheta = sqrt((1.0 - LGL_AQom.x) / (1.0 + (alpha * alpha - 1.0) * LGL_AQom.x));
           float sinTheta = sqrt(1.0 - cosTheta * cosTheta);
-          vec3 halfVector = basis * sign(dot(LGL_BM, viewDir)) * vec3(sinTheta * cos(phi), sinTheta * sin(phi), cosTheta);
+          vec3 halfVector = basis * sign(dot(faceNormal, viewDir)) * vec3(sinTheta * cos(phi), sinTheta * sin(phi), cosTheta);
           vec3 lightDir = reflect(-viewDir, halfVector);
           return lightDir;
       }
-      vec3 LGL_Ae(vec3 LGL_BM, vec3 viewDir, mat3 basis, vec2 LGL_AQom) {
-          return basis * sign(dot(LGL_BM, viewDir)) * LGL_Ab(LGL_AQom);
+      vec3 LGL_Ae(vec3 faceNormal, vec3 viewDir, mat3 basis, vec2 LGL_AQom) {
+          return basis * sign(dot(faceNormal, viewDir)) * LGL_Ab(LGL_AQom);
       }
       float LGL_Af(float f, float g) {
           return (f * f) / (f * f + g * g);
@@ -1264,7 +1262,7 @@ export default {
       }
       layout(location = 0) out vec4 out_light;
       void bounce(inout Path path, int depth, inout SurfaceInteraction si, inout BsdfSampleRec bsdfSampleRec, in LightSampleRec lightSampleRec) {
-          if(!si.LGL_BK) {
+          if(!si.hit) {
               if(depth == 0 && enviromentVisible == 0.) {
                   path.alpha = 0.0;
                   path.LGL_BQ = true;

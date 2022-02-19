@@ -61,9 +61,9 @@ export default {
             float historyLength = 0.;
             float sum = 0.;
             float luminance = 0.2126 * currentLight.x + 0.7152 * currentLight.y + 0.0722 * currentLight.z;
-            float N = texelFetch(previousMomentLengthVarianceTex, hTexel, 0).b;
+            float h = texelFetch(previousMomentLengthVarianceTex, hTexel, 0).b;
            
-            if (N > 0.0 && currentMeshId > 0.0) {
+            if (h > 0.0 && currentMeshId > 0.0) {
                  // bilinear sampling, rejecting samples that don't have a matching mesh id
                 for (int i = 0; i < 4; i++) {
                     vec2 gCoord = (vec2(texel[i]) + 0.5) * hSizeInv;

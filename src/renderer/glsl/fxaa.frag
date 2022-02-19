@@ -1,6 +1,6 @@
 export default {
-  source: `
-        layout(location = 0) out vec4 out_color;
+  outputs: ['color'],
+  source: ` 
         uniform sampler2D inputBuffer;
         uniform vec2 resolution;
         in vec2 vCoord;

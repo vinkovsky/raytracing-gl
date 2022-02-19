@@ -7,5 +7,4 @@ export default `
     #define ONE_MINUS_EPS 0.999999
     #define INF 1000000.0
     #define ROUGHNESS_MIN 0.001
-    #define RAYTRACEMTL 0
 `

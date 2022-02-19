@@ -22,9 +22,9 @@ export default {
         uniform float useMomentVariance;
         uniform float demodulateAlbedo;
 
-        // float calcTheta(float v) {
-        //     return acos(min(max(v, 0.0), 1.0));
-        // }
+        float calcTheta(float v) {
+            return acos(min(max(v, 0.0), 1.0));
+        }
 
         float getAlpha(vec2 uv) {
             return max(texture(dataTex, uv).a, 0.);

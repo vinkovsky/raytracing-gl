@@ -4,8 +4,9 @@ import constants from './chunks/constants.glsl';
 
 export default {
   includes: [constants],
+  outputs: ['light'],
   source: (e) => `
- 
+     #define RAYTRACEMTL 0
 
       const vec3 luminance = vec3(0.2126, 0.7152, 0.0722);
 
@@ -1260,7 +1261,7 @@ export default {
       #endif
           return Li;
       }
-      layout(location = 0) out vec4 out_light;
+     // layout(location = 0) out vec4 out_light;
       void bounce(inout Path path, int depth, inout SurfaceInteraction si, inout BsdfSampleRec bsdfSampleRec, in LightSampleRec lightSampleRec) {
           if(!si.hit) {
               if(depth == 0 && enviromentVisible == 0.) {

@@ -2,11 +2,10 @@ import path from "path";
 import babel from "@rollup/plugin-babel";
 import resolve from "@rollup/plugin-node-resolve";
 import { terser } from "rollup-plugin-terser";
-// import glslOptimize from "rollup-plugin-glsl-optimize";
 
 const root = process.platform === "win32" ? path.resolve("/") : "/";
 const external = (id) => !id.startsWith(".") && !id.startsWith(root);
-const extensions = [".js", ".glsl", ".frag", ".vert"];
+const extensions = [".js", ".jsx", ".ts", ".tsx", ".glsl", ".frag", ".vert"];
 
 const getBabelOptions = ({ useESModules }) => ({
   babelrc: false,
@@ -29,8 +28,8 @@ const getBabelOptions = ({ useESModules }) => ({
         targets: "> 1%, not dead, not ie 11, not op_mini all",
       },
     ],
-    // "@babel/preset-react",
-    // "@babel/preset-typescript",
+    "@babel/preset-react",
+    "@babel/preset-typescript",
   ],
   plugins: [["@babel/transform-runtime", { regenerator: false, useESModules }]],
 });
@@ -39,8 +38,8 @@ export default [
   {
     input: "./src/main.js",
     output: {
-      file: "dist/rt-renderer.js",
-      name: "rt-renderer",
+      file: "dist/raytracing-gl.js",
+      name: "raytracing-gl",
       globals: {
         three: "THREE",
       },
@@ -48,10 +47,23 @@ export default [
     },
     external,
     plugins: [
+      babel(getBabelOptions({ useESModules: false })),
+      resolve({ extensions }),
+      terser(),
+    ],
+  },
+  {
+    input: "./src/wrapper.tsx",
+    output: {
+      file: "dist/react-raytracing-gl.js",
+      name: "react-raytracing-gl",
+      format: "esm",
+    },
+    external,
+    plugins: [
       babel(getBabelOptions({ useESModules: true })),
       resolve({ extensions }),
       terser(),
-      // glslOptimize({}),
     ],
   },
 ];

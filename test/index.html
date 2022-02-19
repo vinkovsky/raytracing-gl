@@ -5,11 +5,11 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Document</title>
-    <script src="/node_modules/three/build/three.js"></script>
-    <script src="/node_modules/three/examples/js/loaders/GLTFLoader.js"></script>
-    <script src="/node_modules/three/examples/js/controls/OrbitControls.js"></script>
-    <script src="/node_modules/three/examples/js/loaders/RGBELoader.js"></script>
-    <script src="/dist/rt-renderer.js"></script>
+    <script src="../node_modules/three/build/three.js"></script>
+    <script src="../node_modules/three/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="../node_modules/three/examples/js/controls/OrbitControls.js"></script>
+    <script src="../node_modules/three/examples/js/loaders/RGBELoader.js"></script>
+    <script src="../dist/raytracing-gl.js"></script>
     <style>
       body {
         margin: 0;
@@ -24,47 +24,32 @@
   </head>
   <body>
     <script>
-      // import * as THREE from "./node_modules/three/build/three.js";
-      // import { RGBELoader } from "./node_modules/three/examples/jsm/loaders/RGBELoader.js";
-      // import { GLTFLoader } from "./node_modules/three/examples/jsm/loaders/GLTFLoader.js";
-      // import { OrbitControls } from "./node_modules/three/examples/jsm/controls/OrbitControls.js";
-
-      // import {
-      //   RayTracingRenderer,
-      //   RayTracingMaterial,
-      //   DirectionalLight,
-      //   PointLight,
-      //   QuadLight,
-      //   RectAreaLight,
-      //   SphereAreaLight,
-      // } from "./build/rt-renderer.js";
-
       async function ae() {
         let e = [];
         const i = [],
           t = new THREE.TextureLoader();
         return (
           [
-            "/assets/diningRoom/textures/book1.jpg",
-            "/assets/diningRoom/textures/book2.jpg",
-            "/assets/diningRoom/textures/book3.jpg",
-            "/assets/diningRoom/textures/book4.jpg",
-            "/assets/diningRoom/textures/book6.jpg",
-            "/assets/diningRoom/textures/book7.jpg",
-            "/assets/diningRoom/textures/book8.jpg",
-            "/assets/diningRoom/textures/book9.jpg",
-            "/assets/diningRoom/textures/book10.jpg",
-            "/assets/diningRoom/textures/book11.jpg",
-            "/assets/diningRoom/textures/book14.jpg",
-            "/assets/diningRoom/textures/book15.jpg",
-            "/assets/diningRoom/textures/book16.jpg",
-            "/assets/diningRoom/textures/book17.jpg",
-            "/assets/diningRoom/textures/book18.jpg",
-            "/assets/diningRoom/textures/box.jpg",
-            "/assets/diningRoom/textures/floor.jpg",
-            "/assets/diningRoom/textures/painting.jpg",
-            "/assets/diningRoom/textures/shelfbook1.jpg",
-            "/assets/diningRoom/textures/shelfbook2.jpg",
+            "/test/assets/diningRoom/textures/book1.jpg",
+            "/test/assets/diningRoom/textures/book2.jpg",
+            "/test/assets/diningRoom/textures/book3.jpg",
+            "/test/assets/diningRoom/textures/book4.jpg",
+            "/test/assets/diningRoom/textures/book6.jpg",
+            "/test/assets/diningRoom/textures/book7.jpg",
+            "/test/assets/diningRoom/textures/book8.jpg",
+            "/test/assets/diningRoom/textures/book9.jpg",
+            "/test/assets/diningRoom/textures/book10.jpg",
+            "/test/assets/diningRoom/textures/book11.jpg",
+            "/test/assets/diningRoom/textures/book14.jpg",
+            "/test/assets/diningRoom/textures/book15.jpg",
+            "/test/assets/diningRoom/textures/book16.jpg",
+            "/test/assets/diningRoom/textures/book17.jpg",
+            "/test/assets/diningRoom/textures/book18.jpg",
+            "/test/assets/diningRoom/textures/box.jpg",
+            "/test/assets/diningRoom/textures/floor.jpg",
+            "/test/assets/diningRoom/textures/painting.jpg",
+            "/test/assets/diningRoom/textures/shelfbook1.jpg",
+            "/test/assets/diningRoom/textures/shelfbook2.jpg",
           ].forEach((r) => {
             i.push(
               new Promise((m) => {
@@ -556,7 +541,7 @@
         );
 
         sphereAreaLight.position.set(0, 5, 0);
-        scene.add(sphereAreaLight);
+        //  scene.add(sphereAreaLight);
 
         sphereAreaLight.visible = false;
         const width = 10;
@@ -569,7 +554,7 @@
         );
         rectAreaLight.position.set(10, 12, 0);
         rectAreaLight.target.set(0, 4, 0);
-        scene.add(rectAreaLight);
+        //  scene.add(rectAreaLight);
         rectAreaLight.visible = false;
 
         const quad = new THREE.QuadLight();
@@ -578,15 +563,15 @@
         quad.v2 = new THREE.Vector3(7, 1, 1);
         quad.position.set(0, 10, 0);
 
-        scene.add(quad);
+        //  scene.add(quad);
 
         const pointLight = new THREE.PointLight(0xffffff, 1);
         pointLight.position.set(2, 5, 0);
         scene.add(pointLight);
 
-        scene.add(directionalLight, directionalLight2);
+        //   scene.add(directionalLight, directionalLight2);
 
-        scene.add(sphereMesh);
+        //   scene.add(sphereMesh);
 
         await renderer.buildScene(scene, camera).then(() => {
           tick();
@@ -601,11 +586,6 @@
       }
 
       init();
-
-      // renderer.fullSampleCallback = () => {
-      //   offScreenCtx.drawImage(renderer.domElement, 0, 0);
-      //   const fullSampleImgData = offScreenCanvas.toDataURL(`image/jpeg`);
-      // };
 
       renderer.loadingCallback = {
         onProgress: (e) => console.log(e),

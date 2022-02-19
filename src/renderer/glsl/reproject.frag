@@ -104,7 +104,7 @@ export default {
                 }
 
                 if (sum > 0.0) {
-                    historyLength = N + 1.;
+                    historyLength = h + 1.;
                     float color_alpha_min = colorBlendFactor;
                     float moment_alpha_min = momentBlendFactor;
                     float color_alpha = max(1.0 / historyLength, color_alpha_min);
